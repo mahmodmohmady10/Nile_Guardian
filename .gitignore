@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Tests / coverage / lint
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build
+build/
+dist/
+*.spec
+
+# Spike output
+spike_output/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

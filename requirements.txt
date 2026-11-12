@@ -1,0 +1,4 @@
+# تبعيات التشغيل. ثبّت pygame-ce فقط، ولا تثبّت pygame التقليدية معها.
+pygame-ce>=2.5
+arabic-reshaper>=3.0
+python-bidi>=0.5
