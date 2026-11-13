@@ -22,6 +22,13 @@ class MapValidationError(ValueError):
 
 
 @dataclass(frozen=True)
+class Dialogue:
+    id: str
+    speaker: str
+    lines: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class NpcSpec:
     id: str
     name_ar: str
@@ -191,3 +198,46 @@ def _parse_npcs(
         seen.add(npc_id)
         npcs.append(NpcSpec(npc_id, name, x, y, event_id))
     return npcs
+
+
+def load_dialogues_file(path: Path) -> dict[str, Dialogue]:
+    source = path.name
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise MapValidationError(source, "<file>", f"تعذر قراءة الملف: {exc}") from exc
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise MapValidationError(source, "<json>", f"صياغة JSON غير صحيحة: {exc}") from exc
+    return validate_dialogues(data, source)
+
+
+def validate_dialogues(data: Any, source: str) -> dict[str, Dialogue]:
+    if not isinstance(data, dict):
+        raise MapValidationError(source, "<root>", "يجب أن يكون الجذر كائناً")
+    dialogues: dict[str, Dialogue] = {}
+    for dialogue_id, body in data.items():
+        if not dialogue_id.strip():
+            raise MapValidationError(source, "<key>", "معرّف الحوار لا يمكن أن يكون فارغاً")
+        if not isinstance(body, dict):
+            raise MapValidationError(source, dialogue_id, "يجب أن يكون كائناً")
+        speaker, lines = body.get("speaker"), body.get("lines")
+        if not isinstance(speaker, str) or not speaker.strip():
+            raise MapValidationError(source, f"{dialogue_id}.speaker", "اسم المتحدث مطلوب")
+        if not isinstance(lines, list) or not lines:
+            raise MapValidationError(source, f"{dialogue_id}.lines", "قائمة أسطر غير فارغة مطلوبة")
+        for index, line in enumerate(lines):
+            if not isinstance(line, str) or not line.strip():
+                raise MapValidationError(source, f"{dialogue_id}.lines[{index}]", "سطر فارغ")
+        dialogues[dialogue_id] = Dialogue(dialogue_id, speaker, tuple(lines))
+    return dialogues
+
+
+def check_npc_dialogues(spec: MapSpec, dialogues: dict[str, Dialogue], source: str) -> None:
+    """كل شخصية في الخريطة يجب أن يكون لها حوار بالمعرّف نفسه."""
+    for npc in spec.npcs:
+        if npc.id not in dialogues:
+            raise MapValidationError(
+                source, f"npcs.{npc.id}", "لا يوجد حوار بهذا المعرّف في dialogues.json"
+            )
