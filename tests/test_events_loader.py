@@ -101,7 +101,7 @@ def test_real_village_events_reference_existing_dialogues() -> None:
     spec = load_map_file(resource_path("data", "maps", "village_01.json"))
     dialogues = load_dialogues_file(resource_path("data", "dialogues.json"))
     check_event_dialogues(spec, dialogues, "village_01.json")
-    assert len(spec.events) == 3
+    assert len(spec.events) == 4
 
 
 def test_new_game_requires_player_name() -> None:

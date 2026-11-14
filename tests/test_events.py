@@ -109,3 +109,18 @@ def test_event_with_no_dialogue_finishes_immediately() -> None:
     runner.start(event, state)
     assert runner.next_command() is None
     assert state.has_flag("seen") and not runner.busy
+
+
+def test_runner_yields_teleport_command() -> None:
+    from src.core.event_system import ACTION_TELEPORT, Teleport
+
+    event = EventSpec(
+        "go",
+        Trigger("on_step", x=0, y=0),
+        (),
+        (Action(ACTION_TELEPORT, map_id="dinder_01", x=28, y=9),),
+    )
+    runner = EventRunner()
+    runner.start(event, fresh_state())
+    assert runner.next_command() == Teleport("dinder_01", 28, 9)
+    assert runner.next_command() is None

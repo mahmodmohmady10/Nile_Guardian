@@ -21,4 +21,6 @@ select = ["E", "F", "W", "I", "B", "UP"]
 source = ["src/core", "src/logic", "src/world"]
 branch = true
 
-# حد التغطية (fail_under = 80) يُفعَّل في M6 عندما يكتمل منطق اللعبة.
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

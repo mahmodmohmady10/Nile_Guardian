@@ -11,6 +11,7 @@ from src.core.event_system import (
     ACTION_DIALOGUE,
     ACTION_GIVE_ANIMAL,
     ACTION_SET_FLAG,
+    ACTION_TELEPORT,
     ACTION_TYPES,
     CONDITION_TYPES,
     ON_INTERACT,
@@ -374,6 +375,13 @@ def _parse_actions(value: Any, field: str, source: str) -> tuple[Action, ...]:
             if not _is_text(item.get("animal_id")):
                 raise MapValidationError(source, f"{item_field}.animal_id", "معرّف الحيوان مطلوب")
             actions.append(Action(kind, animal_id=item["animal_id"]))
+        elif kind == ACTION_TELEPORT:
+            map_id, x, y = item.get("map_id"), item.get("x"), item.get("y")
+            if not _is_text(map_id):
+                raise MapValidationError(source, f"{item_field}.map_id", "معرّف الخريطة مطلوب")
+            if not _is_int(x) or not _is_int(y):
+                raise MapValidationError(source, item_field, "x و y يجب أن يكونا عددين صحيحين")
+            actions.append(Action(kind, map_id=map_id, x=x, y=y))
     return tuple(actions)
 
 
@@ -506,3 +514,21 @@ def check_party_refs(new_game: NewGameSpec, catalog: Catalog, source: str) -> No
     for animal_id in new_game.party:
         if animal_id not in catalog.animals:
             raise MapValidationError(source, "party", f"حيوان غير موجود: {animal_id}")
+
+
+def check_teleport_refs(spec: MapSpec, maps: dict[str, MapSpec], source: str) -> None:
+    """الانتقال يجب أن يشير إلى خريطة موجودة، وإلى بلاطة صالحة وغير صلبة فيها."""
+    for index, event in enumerate(spec.events):
+        for action in event.actions:
+            if action.type != ACTION_TELEPORT:
+                continue
+            target = maps.get(action.map_id or "")
+            field = f"events[{index}].actions"
+            if target is None:
+                raise MapValidationError(source, field, f"خريطة غير موجودة: {action.map_id}")
+            if action.x is None or action.y is None:
+                raise MapValidationError(source, field, "إحداثيات الهدف ناقصة")
+            if not (0 <= action.x < target.width and 0 <= action.y < target.height):
+                raise MapValidationError(source, field, "الهدف خارج حدود الخريطة")
+            if target.legend[target.rows[action.y][action.x]].solid:
+                raise MapValidationError(source, field, "الهدف يقع على بلاطة صلبة")

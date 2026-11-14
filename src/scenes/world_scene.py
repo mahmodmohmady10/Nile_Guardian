@@ -1,4 +1,4 @@
-"""مشهد القرية: الخريطة والأمين، والأحداث، والتفاعل، ومواجهات الأعشاب."""
+"""مشهد العالم: الخريطة والأمين، والأحداث، والتفاعل، والانتقال بين الخرائط، والمواجهات."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from src.core.event_system import (
     ON_MAP_ENTER,
     ON_STEP,
     EventRunner,
+    Teleport,
     Trigger,
     select_event,
 )
@@ -31,29 +32,34 @@ NPC_COLOR = (200, 120, 230)
 class WorldScene(BaseScene):
     def __init__(
         self,
-        spec: MapSpec,
         state: GameState,
+        load_map: Callable[[str], MapSpec],
         on_back: Callable[[], None],
         open_dialogue: Callable[[str, Callable[[], None]], None],
         open_battle: Callable[[str, Callable[[str], None]], None],
         rng: random.Random,
     ) -> None:
+        self._state = state
+        self._load_map = load_map
         self._on_back = on_back
         self._open_dialogue = open_dialogue
         self._open_battle = open_battle
         self._rng = rng
-        self._state = state
+        self._runner = EventRunner()
+        self._waiting_for_dialogue = False
+        self._map_surface: pygame.Surface | None = None
+        self._apply(state.map_id, load_map(state.map_id))
+        self._player = PlayerController(state.grid_x, state.grid_y, MOVE_SECONDS_PER_TILE)
+
+    def _apply(self, map_id: str, spec: MapSpec) -> None:
+        self._state.map_id = map_id
+        self._map = TileMap(spec.width, spec.height, spec.rows, spec.legend)
         self._events = spec.events
         self._zones: tuple[EncounterZone, ...] = spec.encounter_zones
         self._spawn = spec.spawn
-        self._runner = EventRunner()
-        self._waiting_for_dialogue = False
-        self._map = TileMap(spec.width, spec.height, spec.rows, spec.legend)
         self._npcs = spec.npcs
         self._npc_at: dict[tuple[int, int], NpcSpec] = {(n.x, n.y): n for n in spec.npcs}
-        self._player = PlayerController(spec.spawn[0], spec.spawn[1], MOVE_SECONDS_PER_TILE)
-        self._map_surface: pygame.Surface | None = None
-        state.grid_x, state.grid_y = spec.spawn
+        self._map_surface = None
 
     def on_enter(self) -> None:
         self._trigger(Trigger(ON_MAP_ENTER))
@@ -63,11 +69,7 @@ class WorldScene(BaseScene):
 
     def update(self, dt: float) -> None:
         if self._runner.busy:
-            if not self._waiting_for_dialogue:
-                command = self._runner.next_command()
-                if command is not None:
-                    self._waiting_for_dialogue = True
-                    self._open_dialogue(command.dialogue_id, self._resume)
+            self._advance_runner()
             return
         self._player.update(dt, self._can_enter)
         arrival = self._player.pop_arrival()
@@ -78,6 +80,22 @@ class WorldScene(BaseScene):
             self._trigger(Trigger(ON_STEP, x=x, y=y))
             if not self._runner.busy:
                 self._maybe_encounter(x, y)
+
+    def _advance_runner(self) -> None:
+        while not self._waiting_for_dialogue:
+            command = self._runner.next_command()
+            if command is None:
+                return
+            if isinstance(command, Teleport):
+                self._teleport(command)
+                continue
+            self._waiting_for_dialogue = True
+            self._open_dialogue(command.dialogue_id, self._resume)
+
+    def _teleport(self, command: Teleport) -> None:
+        self._apply(command.map_id, self._load_map(command.map_id))
+        self._player = PlayerController(command.x, command.y, MOVE_SECONDS_PER_TILE)
+        self._state.grid_x, self._state.grid_y = command.x, command.y
 
     def handle_action(self, action: str) -> None:
         if self._runner.busy:
@@ -114,12 +132,9 @@ class WorldScene(BaseScene):
 
     def _battle_ended(self, outcome: str) -> None:
         if outcome == OUTCOME_LOST:
-            self._return_to_spawn()
-
-    def _return_to_spawn(self) -> None:
-        spawn_x, spawn_y = self._spawn
-        self._player = PlayerController(spawn_x, spawn_y, MOVE_SECONDS_PER_TILE)
-        self._state.grid_x, self._state.grid_y = spawn_x, spawn_y
+            spawn_x, spawn_y = self._spawn
+            self._player = PlayerController(spawn_x, spawn_y, MOVE_SECONDS_PER_TILE)
+            self._state.grid_x, self._state.grid_y = spawn_x, spawn_y
 
     def draw(self, surface: pygame.Surface) -> None:
         if self._map_surface is None:

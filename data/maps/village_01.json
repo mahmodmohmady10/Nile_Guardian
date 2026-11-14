@@ -149,6 +149,32 @@
           "dialogue_id": "elder_return"
         }
       ]
+    },
+    {
+      "id": "to_dinder",
+      "trigger": {
+        "type": "on_step",
+        "x": 0,
+        "y": 9
+      },
+      "conditions": [
+        {
+          "type": "flag_set",
+          "flag": "got_starter"
+        }
+      ],
+      "actions": [
+        {
+          "type": "dialogue",
+          "dialogue_id": "dinder_entry"
+        },
+        {
+          "type": "teleport",
+          "map_id": "dinder_01",
+          "x": 28,
+          "y": 9
+        }
+      ]
     }
   ],
   "encounter_zones": [

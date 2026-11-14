@@ -11,7 +11,6 @@ import pygame
 
 from src.config import FONT_FILE, HEIGHT, TEXT_CACHE_SIZE, TITLE, WIDTH
 from src.core.game_state import GameState
-from src.core.scene import Scene
 from src.core.scene_stack import SceneStack
 from src.engine.game import Game
 from src.engine.text_renderer import TextRenderer
@@ -26,10 +25,12 @@ from src.utils.data_loader import (
     Dialogue,
     MapSpec,
     MapValidationError,
+    NewGameSpec,
     check_animal_refs,
     check_event_dialogues,
     check_npc_dialogues,
     check_party_refs,
+    check_teleport_refs,
     load_catalog,
     load_dialogues_file,
     load_map_file,
@@ -37,20 +38,19 @@ from src.utils.data_loader import (
 )
 from src.utils.paths import resource_path
 
-VILLAGE_MAP = ("data", "maps", "village_01.json")
+MAP_FILES = {"village_01": "village_01.json", "dinder_01": "dinder_01.json"}
 DIALOGUES = ("data", "dialogues.json")
 NEW_GAME = ("data", "new_game.json")
 ANIMALS = ("data", "animals.json")
 MOVES = ("data", "moves.json")
-VILLAGE_NAME = "village_01.json"
 NEW_GAME_NAME = "new_game.json"
-VILLAGE_ID = "village_01"
+START_MAP = "village_01"
 
 
 @dataclass
 class Session:
     stack: SceneStack
-    spec: MapSpec
+    maps: dict[str, MapSpec]
     state: GameState
     dialogues: dict[str, Dialogue]
     catalog: Catalog
@@ -64,8 +64,8 @@ def make_menu(session: Session) -> MenuScene:
 
 def make_world(session: Session) -> WorldScene:
     return WorldScene(
-        session.spec,
         session.state,
+        load_map=lambda map_id: session.maps[map_id],
         on_back=lambda: session.stack.replace(make_menu(session)),
         open_dialogue=lambda dialogue_id, on_done: open_dialogue(session, dialogue_id, on_done),
         open_battle=lambda enemy_id, on_end: open_battle(session, enemy_id, on_end),
@@ -98,20 +98,29 @@ def open_battle(session: Session, enemy_id: str, on_end: Callable[[str], None]) 
     session.stack.push(BattleScene(engine, session.renderer, on_finish=finish))
 
 
+def load_everything() -> tuple[dict[str, MapSpec], dict[str, Dialogue], Catalog, NewGameSpec]:
+    maps = {
+        map_id: load_map_file(resource_path("data", "maps", filename))
+        for map_id, filename in MAP_FILES.items()
+    }
+    dialogues = load_dialogues_file(resource_path(*DIALOGUES))
+    catalog = load_catalog(resource_path(*ANIMALS), resource_path(*MOVES))
+    new_game = load_new_game_file(resource_path(*NEW_GAME))
+    for map_id, spec in maps.items():
+        source = MAP_FILES[map_id]
+        check_npc_dialogues(spec, dialogues, source)
+        check_event_dialogues(spec, dialogues, source)
+        check_animal_refs(spec, catalog, source)
+        check_teleport_refs(spec, maps, source)
+    check_party_refs(new_game, catalog, NEW_GAME_NAME)
+    if new_game.map_id not in maps:
+        raise MapValidationError(NEW_GAME_NAME, "map_id", f"خريطة غير معروفة: {new_game.map_id}")
+    return maps, dialogues, catalog, new_game
+
+
 def main() -> int:
     try:
-        spec = load_map_file(resource_path(*VILLAGE_MAP))
-        dialogues = load_dialogues_file(resource_path(*DIALOGUES))
-        catalog = load_catalog(resource_path(*ANIMALS), resource_path(*MOVES))
-        new_game = load_new_game_file(resource_path(*NEW_GAME))
-        check_npc_dialogues(spec, dialogues, VILLAGE_NAME)
-        check_event_dialogues(spec, dialogues, VILLAGE_NAME)
-        check_animal_refs(spec, catalog, VILLAGE_NAME)
-        check_party_refs(new_game, catalog, NEW_GAME_NAME)
-        if new_game.map_id != VILLAGE_ID:
-            raise MapValidationError(
-                NEW_GAME_NAME, "map_id", f"خريطة غير معروفة: {new_game.map_id}"
-            )
+        maps, dialogues, catalog, new_game = load_everything()
     except MapValidationError as exc:
         print(f"خطأ في بيانات اللعبة: {exc}", file=sys.stderr)
         return 1
@@ -125,6 +134,8 @@ def main() -> int:
         player_name=new_game.player_name,
         map_id=new_game.map_id,
         templates=catalog.animals,
+        grid_x=maps[new_game.map_id].spawn[0],
+        grid_y=maps[new_game.map_id].spawn[1],
     )
     for animal_id in new_game.party:
         state.give_animal(animal_id)
@@ -136,7 +147,7 @@ def main() -> int:
         stack = SceneStack()
         session = Session(
             stack=stack,
-            spec=spec,
+            maps=maps,
             state=state,
             dialogues=dialogues,
             catalog=catalog,
