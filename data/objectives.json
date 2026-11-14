@@ -1,0 +1,14 @@
+[
+  {"id": "meet_elder", "text_ar": "تحدث مع العم الطيب في القرية", "map_id": "village_01",
+   "target": {"type": "npc", "id": "elder_tayeb"}, "done": {"type": "flag", "id": "got_starter"}},
+  {"id": "find_ghazal", "text_ar": "ابحث عن الغزال في الحقل الشمالي", "map_id": "village_01",
+   "target": {"type": "zone", "id": "north_fields"}, "done": {"type": "defeated", "id": "ghazal_reem"}},
+  {"id": "find_timsah", "text_ar": "ابحث عن التمساح قرب ضفة النهر", "map_id": "dinder_01",
+   "target": {"type": "zone", "id": "river_bank"}, "done": {"type": "defeated", "id": "timsah_nile"}},
+  {"id": "find_wolf", "text_ar": "ابحث عن الذئب في السافانا", "map_id": "dinder_01",
+   "target": {"type": "zone", "id": "savanna"}, "done": {"type": "defeated", "id": "wolf"}},
+  {"id": "find_leopard", "text_ar": "ابحث عن النمر في السافانا", "map_id": "dinder_01",
+   "target": {"type": "zone", "id": "savanna"}, "done": {"type": "defeated", "id": "leopard"}},
+  {"id": "find_lion", "text_ar": "ابحث عن الأسد في عرينه", "map_id": "dinder_01",
+   "target": {"type": "zone", "id": "lion_den"}, "done": {"type": "defeated", "id": "asad_dinder"}}
+]

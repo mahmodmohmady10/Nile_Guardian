@@ -1,4 +1,4 @@
-"""نماذج المعارك: الحركات والحيوانات (قوالب ونسخ بالحيوية). بلا pygame."""
+"""نماذج المعارك: التأثيرات والحركات والحيوانات (قوالب ونسخ بالحيوية). بلا pygame."""
 
 from __future__ import annotations
 
@@ -6,11 +6,23 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class Effect:
+    kind: str = "none"  # none | extra_damage | heal_percent | priority_next_turn
+    multiplier: float = 1.0
+    percent: int = 0
+
+
+@dataclass(frozen=True)
 class Move:
     id: str
     name_ar: str
-    power: int
-    accuracy: int  # من 1 إلى 100
+    effect: Effect
+
+
+@dataclass(frozen=True)
+class LastStand:
+    threshold_percent: int
+    bonus_percent: int
 
 
 @dataclass(frozen=True)
@@ -23,12 +35,20 @@ class AnimalTemplate:
     speed: int
     basic_move: str
     special_move: str
+    crit_chance: float
+    crit_multiplier: float
+    variance_min: float
+    variance_max: float
+    flee_at_percent: int | None
+    last_stand: LastStand | None
 
 
 @dataclass
 class AnimalInstance:
     template: AnimalTemplate
     current_hp: int
+    last_stand_used: bool = False
+    priority_next: bool = False
 
     @classmethod
     def fresh(cls, template: AnimalTemplate) -> AnimalInstance:
@@ -52,3 +72,5 @@ class AnimalInstance:
 
     def heal_full(self) -> None:
         self.current_hp = self.template.max_hp
+        self.last_stand_used = False
+        self.priority_next = False

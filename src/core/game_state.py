@@ -17,12 +17,16 @@ class GameState:
     facing: str = "down"
     party: list[AnimalInstance] = field(default_factory=list)
     flags: set[str] = field(default_factory=set)
+    defeated: set[str] = field(default_factory=set)
 
     def has_flag(self, flag: str) -> bool:
         return flag in self.flags
 
     def set_flag(self, flag: str) -> None:
         self.flags.add(flag)
+
+    def mark_defeated(self, animal_id: str) -> None:
+        self.defeated.add(animal_id)
 
     def give_animal(self, animal_id: str) -> None:
         if any(animal.id == animal_id for animal in self.party):

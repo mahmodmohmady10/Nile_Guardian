@@ -1,10 +1,66 @@
 {
-  "peck": {"name_ar": "نقرة", "power": 30, "accuracy": 95},
-  "dive": {"name_ar": "انقضاض", "power": 50, "accuracy": 75},
-  "dash": {"name_ar": "اندفاعة", "power": 28, "accuracy": 95},
-  "swift_leap": {"name_ar": "وثبة سريعة", "power": 48, "accuracy": 80},
-  "bite": {"name_ar": "عضة", "power": 32, "accuracy": 90},
-  "tail_sweep": {"name_ar": "ضربة الذيل", "power": 46, "accuracy": 78},
-  "claw": {"name_ar": "مخلب", "power": 30, "accuracy": 92},
-  "roar": {"name_ar": "زئير", "power": 52, "accuracy": 70}
+  "peck": {
+    "name_ar": "نقرة",
+    "effect": {
+      "type": "none"
+    }
+  },
+  "dive": {
+    "name_ar": "انقضاض",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.5
+    }
+  },
+  "dash": {
+    "name_ar": "اندفاعة",
+    "effect": {
+      "type": "none"
+    }
+  },
+  "swift_leap": {
+    "name_ar": "وثبة سريعة",
+    "effect": {
+      "type": "priority_next_turn"
+    }
+  },
+  "bite": {
+    "name_ar": "عضة",
+    "effect": {
+      "type": "none"
+    }
+  },
+  "tail_sweep": {
+    "name_ar": "ضربة الذيل",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.5
+    }
+  },
+  "claw": {
+    "name_ar": "مخلب",
+    "effect": {
+      "type": "none"
+    }
+  },
+  "roar": {
+    "name_ar": "زئير",
+    "effect": {
+      "type": "heal_percent",
+      "percent": 15
+    }
+  },
+  "fang_hunt": {
+    "name_ar": "عضة الافتراس",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.5
+    }
+  },
+  "pounce": {
+    "name_ar": "وثبة مفاجئة",
+    "effect": {
+      "type": "priority_next_turn"
+    }
+  }
 }

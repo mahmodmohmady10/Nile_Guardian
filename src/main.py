@@ -14,7 +14,7 @@ from src.core.game_state import GameState
 from src.core.scene_stack import SceneStack
 from src.engine.game import Game
 from src.engine.text_renderer import TextRenderer
-from src.logic.battle_engine import OUTCOME_LOST, BattleEngine
+from src.logic.battle_engine import OUTCOME_ENEMY_FLED, OUTCOME_LOST, OUTCOME_WON, BattleEngine
 from src.logic.models import AnimalInstance
 from src.scenes.battle_scene import BattleScene
 from src.scenes.dialogue_scene import DialogueScene
@@ -30,13 +30,17 @@ from src.utils.data_loader import (
     check_event_dialogues,
     check_npc_dialogues,
     check_party_refs,
+    build_guide,
+    check_objectives,
     check_teleport_refs,
     load_catalog,
     load_dialogues_file,
     load_map_file,
     load_new_game_file,
+    load_objectives_file,
 )
 from src.utils.paths import resource_path
+from src.world.objectives import GuideData
 
 MAP_FILES = {"village_01": "village_01.json", "dinder_01": "dinder_01.json"}
 DIALOGUES = ("data", "dialogues.json")
@@ -44,6 +48,8 @@ NEW_GAME = ("data", "new_game.json")
 ANIMALS = ("data", "animals.json")
 MOVES = ("data", "moves.json")
 NEW_GAME_NAME = "new_game.json"
+OBJECTIVES = ("data", "objectives.json")
+OBJECTIVES_NAME = "objectives.json"
 START_MAP = "village_01"
 
 
@@ -56,6 +62,7 @@ class Session:
     catalog: Catalog
     renderer: TextRenderer
     rng: random.Random
+    guide: GuideData
 
 
 def make_menu(session: Session) -> MenuScene:
@@ -70,6 +77,8 @@ def make_world(session: Session) -> WorldScene:
         open_dialogue=lambda dialogue_id, on_done: open_dialogue(session, dialogue_id, on_done),
         open_battle=lambda enemy_id, on_end: open_battle(session, enemy_id, on_end),
         rng=session.rng,
+        guide=session.guide,
+        renderer=session.renderer,
     )
 
 
@@ -92,13 +101,17 @@ def open_battle(session: Session, enemy_id: str, on_end: Callable[[str], None]) 
     def finish(outcome: str) -> None:
         if outcome == OUTCOME_LOST:
             session.state.heal_party()
+        if outcome in (OUTCOME_WON, OUTCOME_ENEMY_FLED):
+            session.state.mark_defeated(enemy_id)
         session.stack.pop()
         on_end(outcome)
 
     session.stack.push(BattleScene(engine, session.renderer, on_finish=finish))
 
 
-def load_everything() -> tuple[dict[str, MapSpec], dict[str, Dialogue], Catalog, NewGameSpec]:
+def load_everything() -> tuple[
+    dict[str, MapSpec], dict[str, Dialogue], Catalog, NewGameSpec, GuideData
+]:
     maps = {
         map_id: load_map_file(resource_path("data", "maps", filename))
         for map_id, filename in MAP_FILES.items()
@@ -113,14 +126,16 @@ def load_everything() -> tuple[dict[str, MapSpec], dict[str, Dialogue], Catalog,
         check_animal_refs(spec, catalog, source)
         check_teleport_refs(spec, maps, source)
     check_party_refs(new_game, catalog, NEW_GAME_NAME)
+    objectives = load_objectives_file(resource_path(*OBJECTIVES))
+    check_objectives(objectives, maps, catalog, OBJECTIVES_NAME)
     if new_game.map_id not in maps:
         raise MapValidationError(NEW_GAME_NAME, "map_id", f"خريطة غير معروفة: {new_game.map_id}")
-    return maps, dialogues, catalog, new_game
+    return maps, dialogues, catalog, new_game, build_guide(maps, objectives)
 
 
 def main() -> int:
     try:
-        maps, dialogues, catalog, new_game = load_everything()
+        maps, dialogues, catalog, new_game, guide = load_everything()
     except MapValidationError as exc:
         print(f"خطأ في بيانات اللعبة: {exc}", file=sys.stderr)
         return 1
@@ -153,6 +168,7 @@ def main() -> int:
             catalog=catalog,
             renderer=TextRenderer(font_path, TEXT_CACHE_SIZE),
             rng=random.Random(),
+            guide=guide,
         )
         stack.push(make_menu(session))
         Game(stack, screen).run()

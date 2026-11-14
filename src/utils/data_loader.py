@@ -22,8 +22,16 @@ from src.core.event_system import (
     EventSpec,
     Trigger,
 )
-from src.logic.models import AnimalTemplate, Move
+from src.logic.models import AnimalTemplate, Effect, LastStand, Move
 from src.world.encounters import EncounterEntry, EncounterZone
+from src.world.objectives import (
+    DONE_DEFEATED,
+    DONE_FLAG,
+    TARGET_NPC,
+    TARGET_ZONE,
+    GuideData,
+    Objective,
+)
 from src.world.tilemap import TileType
 
 REQUIRED_MAP_FIELDS = ("width", "height", "tile_legend", "grid", "spawn", "npcs", "events")
@@ -109,6 +117,13 @@ def load_catalog(animals_path: Path, moves_path: Path) -> Catalog:
     return Catalog(animals=animals, moves=moves)
 
 
+EFFECT_KINDS = ("none", "extra_damage", "heal_percent", "priority_next_turn")
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
 def validate_moves(data: Any, source: str) -> dict[str, Move]:
     if not isinstance(data, dict):
         raise MapValidationError(source, "<root>", "يجب أن يكون الجذر كائناً")
@@ -118,13 +133,23 @@ def validate_moves(data: Any, source: str) -> dict[str, Move]:
             raise MapValidationError(source, move_id, "يجب أن يكون كائناً")
         if not _is_text(body.get("name_ar")):
             raise MapValidationError(source, f"{move_id}.name_ar", "الاسم العربي مطلوب")
-        power = body.get("power")
-        if not _is_int(power) or power <= 0:
-            raise MapValidationError(source, f"{move_id}.power", "قوة موجبة صحيحة مطلوبة")
-        accuracy = body.get("accuracy")
-        if not _is_int(accuracy) or not 1 <= accuracy <= 100:
-            raise MapValidationError(source, f"{move_id}.accuracy", "الدقة بين 1 و100")
-        moves[move_id] = Move(move_id, body["name_ar"], power, accuracy)
+        effect = body.get("effect")
+        if not isinstance(effect, dict) or effect.get("type") not in EFFECT_KINDS:
+            raise MapValidationError(source, f"{move_id}.effect.type", "نوع تأثير غير معروف")
+        kind = effect["type"]
+        if kind == "extra_damage":
+            multiplier = effect.get("multiplier")
+            if not _is_number(multiplier) or multiplier <= 0:
+                raise MapValidationError(source, f"{move_id}.effect.multiplier", "مضاعف موجب مطلوب")
+            parsed = Effect(kind, multiplier=float(multiplier))
+        elif kind == "heal_percent":
+            percent = effect.get("percent")
+            if not _is_int(percent) or not 1 <= percent <= 100:
+                raise MapValidationError(source, f"{move_id}.effect.percent", "النسبة بين 1 و100")
+            parsed = Effect(kind, percent=percent)
+        else:
+            parsed = Effect(kind)
+        moves[move_id] = Move(move_id, body["name_ar"], parsed)
     return moves
 
 
@@ -133,21 +158,49 @@ def validate_animals(data: Any, moves: dict[str, Move], source: str) -> dict[str
         raise MapValidationError(source, "<root>", "يجب أن يكون الجذر كائناً")
     animals: dict[str, AnimalTemplate] = {}
     for animal_id, body in data.items():
+        field = animal_id
         if not isinstance(body, dict):
-            raise MapValidationError(source, animal_id, "يجب أن يكون كائناً")
+            raise MapValidationError(source, field, "يجب أن يكون كائناً")
         if not _is_text(body.get("name_ar")):
-            raise MapValidationError(source, f"{animal_id}.name_ar", "الاسم العربي مطلوب")
+            raise MapValidationError(source, f"{field}.name_ar", "الاسم العربي مطلوب")
         for stat in ("max_hp", "attack", "defense"):
             value = body.get(stat)
             if not _is_int(value) or value <= 0:
-                raise MapValidationError(source, f"{animal_id}.{stat}", "قيمة موجبة صحيحة مطلوبة")
+                raise MapValidationError(source, f"{field}.{stat}", "قيمة موجبة صحيحة مطلوبة")
         speed = body.get("speed")
         if not _is_int(speed) or speed < 0:
-            raise MapValidationError(source, f"{animal_id}.speed", "سرعة صحيحة غير سالبة")
+            raise MapValidationError(source, f"{field}.speed", "سرعة صحيحة غير سالبة")
+        crit_chance = body.get("crit_chance")
+        if not _is_number(crit_chance) or not 0 <= crit_chance <= 1:
+            raise MapValidationError(source, f"{field}.crit_chance", "فرصة بين 0 و1")
+        crit_multiplier = body.get("crit_multiplier")
+        if not _is_number(crit_multiplier) or crit_multiplier < 1:
+            raise MapValidationError(source, f"{field}.crit_multiplier", "مضاعف حرجة 1 أو أكثر")
+        vmin, vmax = body.get("variance_min"), body.get("variance_max")
+        if not _is_number(vmin) or not 0 < vmin <= 1:
+            raise MapValidationError(source, f"{field}.variance_min", "قيمة بين 0 و1")
+        if not _is_number(vmax) or not vmin <= vmax <= 1:
+            raise MapValidationError(source, f"{field}.variance_max", "يجب أن يكون بين min و1")
+        flee = body.get("flee_at_percent")
+        if flee is not None and (not _is_int(flee) or not 1 <= flee <= 99):
+            raise MapValidationError(source, f"{field}.flee_at_percent", "نسبة بين 1 و99 أو null")
+        last_raw = body.get("last_stand")
+        last: LastStand | None = None
+        if last_raw is not None:
+            if not isinstance(last_raw, dict):
+                raise MapValidationError(source, f"{field}.last_stand", "كائن أو null")
+            threshold, bonus = last_raw.get("threshold_percent"), last_raw.get("bonus_percent")
+            if not _is_int(threshold) or not 1 <= threshold <= 50:
+                raise MapValidationError(
+                    source, f"{field}.last_stand.threshold_percent", "بين 1 و50"
+                )
+            if not _is_int(bonus) or not 1 <= bonus <= 100:
+                raise MapValidationError(source, f"{field}.last_stand.bonus_percent", "بين 1 و100")
+            last = LastStand(threshold, bonus)
         for slot in ("basic_move", "special_move"):
             if body.get(slot) not in moves:
                 raise MapValidationError(
-                    source, f"{animal_id}.{slot}", f"حركة غير موجودة: {body.get(slot)}"
+                    source, f"{field}.{slot}", f"حركة غير موجودة: {body.get(slot)}"
                 )
         animals[animal_id] = AnimalTemplate(
             id=animal_id,
@@ -158,6 +211,12 @@ def validate_animals(data: Any, moves: dict[str, Move], source: str) -> dict[str
             speed=speed,
             basic_move=body["basic_move"],
             special_move=body["special_move"],
+            crit_chance=float(crit_chance),
+            crit_multiplier=float(crit_multiplier),
+            variance_min=float(vmin),
+            variance_max=float(vmax),
+            flee_at_percent=flee,
+            last_stand=last,
         )
     return animals
 
@@ -532,3 +591,103 @@ def check_teleport_refs(spec: MapSpec, maps: dict[str, MapSpec], source: str) ->
                 raise MapValidationError(source, field, "الهدف خارج حدود الخريطة")
             if target.legend[target.rows[action.y][action.x]].solid:
                 raise MapValidationError(source, field, "الهدف يقع على بلاطة صلبة")
+
+
+# ---------- objectives and guide ----------
+
+def load_objectives_file(path: Path) -> tuple[Objective, ...]:
+    data, source = _read_json(path)
+    return validate_objectives(data, source)
+
+
+def validate_objectives(data: Any, source: str) -> tuple[Objective, ...]:
+    if not isinstance(data, list):
+        raise MapValidationError(source, "<root>", "يجب أن يكون الجذر قائمة")
+    seen: set[str] = set()
+    objectives: list[Objective] = []
+    for index, item in enumerate(data):
+        field = f"[{index}]"
+        if not isinstance(item, dict) or not _is_text(item.get("id")):
+            raise MapValidationError(source, f"{field}.id", "معرّف الهدف مطلوب ونصّي")
+        objective_id = item["id"]
+        if objective_id in seen:
+            raise MapValidationError(source, f"{field}.id", f"معرّف مكرر: {objective_id}")
+        seen.add(objective_id)
+        if not _is_text(item.get("text_ar")):
+            raise MapValidationError(source, f"{field}.text_ar", "نص الهدف مطلوب")
+        if not _is_text(item.get("map_id")):
+            raise MapValidationError(source, f"{field}.map_id", "معرّف الخريطة مطلوب")
+        target = item.get("target")
+        if not isinstance(target, dict) or target.get("type") not in (TARGET_NPC, TARGET_ZONE):
+            raise MapValidationError(source, f"{field}.target.type", "npc أو zone")
+        if not _is_text(target.get("id")):
+            raise MapValidationError(source, f"{field}.target.id", "المعرّف مطلوب")
+        done = item.get("done")
+        if not isinstance(done, dict) or done.get("type") not in (DONE_FLAG, DONE_DEFEATED):
+            raise MapValidationError(source, f"{field}.done.type", "flag أو defeated")
+        if not _is_text(done.get("id")):
+            raise MapValidationError(source, f"{field}.done.id", "المعرّف مطلوب")
+        objectives.append(
+            Objective(
+                id=objective_id,
+                text_ar=item["text_ar"],
+                map_id=item["map_id"],
+                target_type=target["type"],
+                target_id=target["id"],
+                done_type=done["type"],
+                done_id=done["id"],
+            )
+        )
+    return tuple(objectives)
+
+
+def check_objectives(
+    objectives: tuple[Objective, ...],
+    maps: dict[str, MapSpec],
+    catalog: Catalog,
+    source: str,
+) -> None:
+    for objective in objectives:
+        field = f"objective[{objective.id}]"
+        spec = maps.get(objective.map_id)
+        if spec is None:
+            raise MapValidationError(source, field, f"خريطة غير موجودة: {objective.map_id}")
+        if objective.target_type == TARGET_NPC:
+            known = {npc.id for npc in spec.npcs}
+        else:
+            known = {zone.id for zone in spec.encounter_zones}
+        if objective.target_id not in known:
+            raise MapValidationError(source, field, f"الهدف غير موجود: {objective.target_id}")
+        if objective.done_type == DONE_DEFEATED and objective.done_id not in catalog.animals:
+            raise MapValidationError(source, field, f"حيوان غير موجود: {objective.done_id}")
+
+
+def build_guide(maps: dict[str, MapSpec], objectives: tuple[Objective, ...]) -> GuideData:
+    """يبني نقاط الأهداف والبوابات من الخرائط نفسها، فلا تُكرَّر الإحداثيات يدوياً."""
+    from src.core.event_system import ACTION_TELEPORT, ON_STEP
+
+    points: dict[str, dict[str, tuple[float, float, float]]] = {}
+    gates: dict[str, dict[str, tuple[float, float, float]]] = {}
+    for map_id, spec in maps.items():
+        local: dict[str, tuple[float, float, float]] = {}
+        for npc in spec.npcs:
+            local[npc.id] = (float(npc.x), float(npc.y), 1.5)
+        for zone in spec.encounter_zones:
+            local[zone.id] = (
+                zone.x + (zone.width - 1) / 2,
+                zone.y + (zone.height - 1) / 2,
+                max(zone.width, zone.height) / 2,
+            )
+        points[map_id] = local
+        local_gates: dict[str, tuple[float, float, float]] = {}
+        for event in spec.events:
+            trigger = event.trigger
+            if trigger.type != ON_STEP or trigger.x is None or trigger.y is None:
+                continue
+            for action in event.actions:
+                if action.type == ACTION_TELEPORT and action.map_id is not None:
+                    local_gates.setdefault(
+                        action.map_id, (float(trigger.x), float(trigger.y), 0.5)
+                    )
+        gates[map_id] = local_gates
+    return GuideData(objectives=objectives, points=points, gates=gates)

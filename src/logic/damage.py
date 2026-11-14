@@ -1,9 +1,9 @@
-"""معادلة الضرر: الدقة والضربة الحرجة والتفاوت العشوائي. بلا pygame.
+"""معادلة الضرر (توازن 0.7). بلا pygame.
 
-ترتيب استهلاك الأرقام العشوائية ثابت دائماً (دقة، ثم حرجة، ثم تفاوت)،
-فتبقى الاختبارات حتمية حتى عند الإخفاق.
-
-الضرر = قوة_الحركة × هجوم_المهاجم ÷ دفاع_المدافع × 0.5 × التفاوت × (1.5 إن حرجة)
+- إن كان الهجوم أكبر من الدفاع: الضرر = (الهجوم − الدفاع) × مضاعف المهارة × الحرجة × التفاوت.
+- إن كان الهجوم أقل من الدفاع: المهاجم يتضرر بالفرق (ضرر مرتد)، والمدافع لا يتضرر.
+- الحرجة وقيمتها والتفاوت خاصة بكل حيوان.
+ترتيب الأرقام العشوائية ثابت (حرجة ثم تفاوت) عند الضرر الموجب، فتبقى الاختبارات حتمية.
 """
 
 from __future__ import annotations
@@ -11,36 +11,33 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from src.logic.models import AnimalInstance, Move
-
-DAMAGE_SCALE = 0.5
-CRITICAL_CHANCE = 1 / 16
-CRITICAL_MULTIPLIER = 1.5
-VARIANCE_MIN = 0.85
-VARIANCE_MAX = 1.0
+from src.logic.models import AnimalInstance
 
 
 @dataclass(frozen=True)
 class AttackResult:
-    hit: bool
-    critical: bool
     damage: int
+    self_damage: int
+    critical: bool
 
 
 def compute_attack(
     attacker: AnimalInstance,
     defender: AnimalInstance,
-    move: Move,
+    multiplier: float,
     rng: random.Random,
 ) -> AttackResult:
-    hit_roll = rng.random()
+    difference = attacker.template.attack - defender.template.defense
+    if difference < 0:
+        return AttackResult(damage=0, self_damage=-difference, critical=False)
+    if difference == 0:
+        return AttackResult(damage=0, self_damage=0, critical=False)
+    template = attacker.template
     crit_roll = rng.random()
     variance_roll = rng.random()
-    if hit_roll >= move.accuracy / 100:
-        return AttackResult(hit=False, critical=False, damage=0)
-    critical = crit_roll < CRITICAL_CHANCE
-    variance = VARIANCE_MIN + variance_roll * (VARIANCE_MAX - VARIANCE_MIN)
-    base = move.power * attacker.template.attack / max(1, defender.template.defense)
-    multiplier = CRITICAL_MULTIPLIER if critical else 1.0
-    damage = max(1, round(base * DAMAGE_SCALE * variance * multiplier))
-    return AttackResult(hit=True, critical=critical, damage=damage)
+    critical = crit_roll < template.crit_chance
+    spread = template.variance_max - template.variance_min
+    variance = template.variance_min + variance_roll * spread
+    critical_multiplier = template.crit_multiplier if critical else 1.0
+    damage = max(1, round(difference * multiplier * critical_multiplier * variance))
+    return AttackResult(damage=damage, self_damage=0, critical=critical)

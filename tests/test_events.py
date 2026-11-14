@@ -20,7 +20,9 @@ from src.core.event_system import (
 from src.core.game_state import GameState
 from src.logic.models import AnimalTemplate
 
-SAQR = AnimalTemplate("saqr", "صقر", 40, 12, 8, 14, "peck", "dive")
+SAQR = AnimalTemplate(
+    "saqr", "صقر", 150, 50, 30, 14, "peck", "dive", 0.02, 2.5, 0.9, 1.0, None, None
+)
 
 
 def fresh_state() -> GameState:

@@ -138,7 +138,7 @@ def test_wild_battle_always_terminates(seed: int) -> None:
         if engine.outcome is not None:
             break
         engine.turn(ACTION_SPECIAL if turn % 2 else ACTION_ATTACK)
-    assert engine.outcome in {"won", "lost", "fled"}
+    assert engine.outcome in {"won", "lost", "fled", "enemy_fled"}
     assert lead.current_hp >= 0 and enemy.current_hp >= 0
 
 
@@ -147,7 +147,7 @@ def test_savanna_produces_encounters() -> None:
     rng = random.Random(7)
     seen = {roll_encounter(zones, 5, 4, rng) for _ in range(500)}
     seen.discard(None)
-    assert seen and seen <= {"ghazal_reem", "asad_dinder"}
+    assert seen and seen <= {"ghazal_reem", "wolf", "leopard"}
 
 
 def test_losing_restores_party_to_full() -> None:

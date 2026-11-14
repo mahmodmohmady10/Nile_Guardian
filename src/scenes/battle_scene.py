@@ -12,6 +12,7 @@ from src.logic.battle_engine import (
     ACTION_ATTACK,
     ACTION_FLEE,
     ACTION_SPECIAL,
+    OUTCOME_ENEMY_FLED,
     OUTCOME_FLED,
     OUTCOME_LOST,
     OUTCOME_WON,
@@ -26,6 +27,7 @@ END_TEXT = {
     OUTCOME_WON: "انتصر الأمين!",
     OUTCOME_LOST: "تراجع الرفيق، وعاد الأمين إلى القرية.",
     OUTCOME_FLED: "انسحب الأمين من المعركة.",
+    OUTCOME_ENEMY_FLED: "انسحب الخصم، وفزت بالمعركة!",
 }
 PHASE_MENU = "menu"
 PHASE_LOG = "log"
@@ -116,5 +118,9 @@ class BattleScene(BaseScene):
         ratio = max(0.0, animal.current_hp / animal.max_hp)
         pygame.draw.rect(surface, color, (x, y + 42, int(BAR_WIDTH * ratio), 16))
         self.draw_text(
-            surface, f"HP {max(0, animal.current_hp)}/{animal.max_hp}", (x, y + 64), TEXT_COLOR, 22
+            surface,
+            f"HP {max(0, animal.current_hp) / 10:g}/{animal.max_hp / 10:g}",
+            (x, y + 64),
+            TEXT_COLOR,
+            22,
         )

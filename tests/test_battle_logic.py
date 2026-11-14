@@ -1,4 +1,4 @@
-"""اختبارات المعركة: الضرر والمبادرة والنهايات، بأرقام عشوائية محقونة (حتمية)."""
+"""اختبارات المعركة (توازن 0.7): الضرر والمرتد والحرجة والتفاوت والمهارات والنهايات."""
 
 from __future__ import annotations
 
@@ -9,8 +9,12 @@ from src.logic.battle_engine import (
     ACTION_FLEE,
     ACTION_SPECIAL,
     KIND_ATTACK,
+    KIND_COUNTER,
+    KIND_ENEMY_FLED,
     KIND_FAINT,
-    KIND_FLEE,
+    KIND_HEAL,
+    KIND_LAST_STAND,
+    OUTCOME_ENEMY_FLED,
     OUTCOME_FLED,
     OUTCOME_LOST,
     OUTCOME_WON,
@@ -18,8 +22,8 @@ from src.logic.battle_engine import (
     BattleEvent,
 )
 from src.logic.battle_text import describe_event
-from src.logic.damage import compute_attack
-from src.logic.models import AnimalInstance, AnimalTemplate, Move
+from src.logic.damage import AttackResult, compute_attack
+from src.logic.models import AnimalInstance, AnimalTemplate, Effect, LastStand, Move
 
 
 class ConstRng:
@@ -30,144 +34,239 @@ class ConstRng:
         return self.value
 
 
+def move(
+    move_id: str,
+    name: str,
+    kind: str = "none",
+    multiplier: float = 1.0,
+    percent: int = 0,
+) -> Move:
+    return Move(move_id, name, Effect(kind, multiplier, percent))
+
+
 MOVES = {
-    "peck": Move("peck", "نقرة", 30, 95),
-    "dive": Move("dive", "انقضاض", 50, 75),
-    "bite": Move("bite", "عضة", 32, 90),
-    "tail": Move("tail", "ضربة الذيل", 46, 78),
+    "peck": move("peck", "نقرة"),
+    "dive": move("dive", "انقضاض", "extra_damage", 1.5),
+    "swift": move("swift", "وثبة سريعة", "priority_next_turn"),
+    "roar": move("roar", "زئير", "heal_percent", percent=15),
+    "bite": move("bite", "عضة"),
+    "tail": move("tail", "ضربة الذيل", "extra_damage", 1.5),
 }
 
 
-def player_template(speed: int = 14) -> AnimalTemplate:
-    return AnimalTemplate("saqr", "صقر", 40, 12, 8, speed, "peck", "dive")
+def template(
+    animal_id: str = "x",
+    name: str = "س",
+    hp: int = 150,
+    atk: int = 50,
+    dfn: int = 30,
+    speed: int = 10,
+    crit: float = 0.0,
+    crit_mult: float = 2.0,
+    vmin: float = 1.0,
+    vmax: float = 1.0,
+    flee: int | None = None,
+    last: LastStand | None = None,
+    basic: str = "peck",
+    special: str = "dive",
+) -> AnimalTemplate:
+    return AnimalTemplate(
+        animal_id, name, hp, atk, dfn, speed, basic, special,
+        crit, crit_mult, vmin, vmax, flee, last,
+    )
 
 
-def enemy_template(speed: int = 6, defense: int = 12) -> AnimalTemplate:
-    return AnimalTemplate("timsah", "تمساح", 48, 13, defense, speed, "bite", "tail")
+def hit(
+    attacker: AnimalInstance, defender: AnimalInstance, multiplier: float = 1.0
+) -> AttackResult:
+    return compute_attack(attacker, defender, multiplier, ConstRng(0.5))  # type: ignore[arg-type]
+
+
+def instance(t: AnimalTemplate, hp: int | None = None) -> AnimalInstance:
+    animal = AnimalInstance.fresh(t)
+    if hp is not None:
+        animal.current_hp = hp
+    return animal
 
 
 def fight(
-    rng: ConstRng | None = None,
-    player_speed: int = 14,
-    enemy_speed: int = 6,
-    player_hp: int = 40,
-    enemy_hp: int = 48,
+    player: AnimalTemplate,
+    enemy: AnimalTemplate,
+    player_hp: int | None = None,
+    enemy_hp: int | None = None,
+    rng: object | None = None,
 ) -> tuple[BattleEngine, AnimalInstance, AnimalInstance]:
-    player = AnimalInstance(player_template(player_speed), player_hp)
-    enemy = AnimalInstance(enemy_template(enemy_speed), enemy_hp)
-    engine = BattleEngine(player, enemy, MOVES, rng or ConstRng(0.5))  # type: ignore[arg-type]
-    return engine, player, enemy
+    p = instance(player, player_hp)
+    e = instance(enemy, enemy_hp)
+    engine = BattleEngine(p, e, MOVES, rng or ConstRng(0.5))  # type: ignore[arg-type]
+    return engine, p, e
 
 
-def test_hit_damage_follows_formula() -> None:
-    player = AnimalInstance.fresh(player_template())
-    enemy = AnimalInstance.fresh(enemy_template())
-    result = compute_attack(player, enemy, MOVES["peck"], ConstRng(0.5))  # type: ignore[arg-type]
-    assert result.hit and not result.critical and result.damage == 14
+# ---------- damage formula ----------
+
+def test_damage_is_attack_minus_defense() -> None:
+    result = hit(instance(template(atk=50)), instance(template(dfn=30)))
+    assert result.damage == 20 and result.self_damage == 0 and not result.critical
 
 
-def test_roll_above_accuracy_misses() -> None:
-    player = AnimalInstance.fresh(player_template())
-    enemy = AnimalInstance.fresh(enemy_template())
-    result = compute_attack(player, enemy, MOVES["peck"], ConstRng(0.99))  # type: ignore[arg-type]
-    assert not result.hit and result.damage == 0
+def test_attack_below_defense_hurts_attacker_only() -> None:
+    result = hit(instance(template(atk=20)), instance(template(dfn=30)))
+    assert result.damage == 0 and result.self_damage == 10
 
 
-def test_critical_hit_multiplies_damage() -> None:
-    player = AnimalInstance.fresh(player_template())
-    enemy = AnimalInstance.fresh(enemy_template())
-    result = compute_attack(player, enemy, MOVES["peck"], ConstRng(0.0))  # type: ignore[arg-type]
-    assert result.hit and result.critical and result.damage == 19
+def test_equal_attack_and_defense_deals_nothing() -> None:
+    result = hit(instance(template(atk=30)), instance(template(dfn=30)))
+    assert result.damage == 0 and result.self_damage == 0
 
 
-def test_damage_is_at_least_one_on_hit() -> None:
-    player = AnimalInstance.fresh(player_template())
-    armored = AnimalInstance.fresh(enemy_template(defense=10_000))
-    result = compute_attack(player, armored, MOVES["peck"], ConstRng(0.5))  # type: ignore[arg-type]
+def test_critical_uses_animal_multiplier() -> None:
+    attacker = instance(template(atk=50, crit=1.0, crit_mult=2.5))
+    result = hit(attacker, instance(template(dfn=30)))
+    assert result.critical and result.damage == 50
+
+
+def test_variance_is_per_animal() -> None:
+    attacker = instance(template(atk=50, vmin=0.9, vmax=0.9))
+    result = hit(attacker, instance(template(dfn=30)))
+    assert result.damage == 18
+
+
+def test_skill_multiplier_applies() -> None:
+    result = hit(instance(template(atk=50)), instance(template(dfn=30)), 1.5)
+    assert result.damage == 30
+
+
+def test_positive_damage_is_at_least_one() -> None:
+    attacker = instance(template(atk=31, vmin=0.5, vmax=0.5))
+    result = hit(attacker, instance(template(dfn=30)))
     assert result.damage == 1
 
 
+# ---------- battle engine ----------
+
 def test_faster_player_acts_first() -> None:
-    engine, _, _ = fight(player_speed=14, enemy_speed=6)
-    events = engine.turn(ACTION_ATTACK)
-    assert events[0].actor_name == "صقر"
-
-
-def test_faster_enemy_acts_first() -> None:
-    engine, _, _ = fight(player_speed=10, enemy_speed=20)
-    events = engine.turn(ACTION_ATTACK)
-    assert events[0].actor_name == "تمساح"
-
-
-def test_speed_tie_goes_to_player() -> None:
-    engine, _, _ = fight(player_speed=10, enemy_speed=10)
+    engine, _, _ = fight(template(name="صقر", speed=14), template(name="تمساح", speed=6))
     assert engine.turn(ACTION_ATTACK)[0].actor_name == "صقر"
 
 
-def test_defeating_enemy_ends_in_win() -> None:
-    engine, _, enemy = fight(enemy_hp=5)
-    events = engine.turn(ACTION_ATTACK)
-    assert engine.outcome == OUTCOME_WON
-    assert events[-1].kind == KIND_FAINT and events[-1].target_name == "تمساح"
-    assert enemy.is_fainted
+def test_faster_enemy_acts_first() -> None:
+    engine, _, _ = fight(template(name="صقر", speed=10), template(name="تمساح", speed=20))
+    assert engine.turn(ACTION_ATTACK)[0].actor_name == "تمساح"
 
 
-def test_losing_lead_animal_ends_in_loss() -> None:
-    engine, player, _ = fight(player_hp=1)
+def test_speed_tie_goes_to_player() -> None:
+    engine, _, _ = fight(template(name="صقر", speed=10), template(name="تمساح", speed=10))
+    assert engine.turn(ACTION_ATTACK)[0].actor_name == "صقر"
+
+
+def test_defeating_enemy_wins() -> None:
+    engine, _, enemy = fight(template(speed=14), template(speed=6), enemy_hp=10)
     engine.turn(ACTION_ATTACK)
-    assert engine.outcome == OUTCOME_LOST
-    assert player.is_fainted
+    assert engine.outcome == OUTCOME_WON and enemy.is_fainted
 
 
-def test_flee_ends_battle_with_single_event() -> None:
-    engine, _, _ = fight()
+def test_losing_lead_animal_loses() -> None:
+    engine, player, _ = fight(template(speed=14), template(speed=6), player_hp=10)
+    engine.turn(ACTION_ATTACK)
+    assert engine.outcome == OUTCOME_LOST and player.is_fainted
+
+
+def test_enemy_flees_at_threshold_and_player_wins() -> None:
+    engine, _, _ = fight(template(speed=14), template(speed=6, flee=30, hp=100), enemy_hp=40)
+    events = engine.turn(ACTION_ATTACK)
+    assert engine.outcome == OUTCOME_ENEMY_FLED
+    assert events[-1].kind == KIND_ENEMY_FLED
+
+
+def test_last_stand_restores_quarter_once() -> None:
+    rule = LastStand(threshold_percent=5, bonus_percent=25)
+    asad = template(name="أسد", hp=200, speed=10, last=rule)
+    engine, player, _ = fight(asad, template(hp=500, atk=10, dfn=10, speed=6), player_hp=9)
+    first = engine.turn(ACTION_ATTACK)
+    assert first[0].kind == KIND_LAST_STAND and first[0].amount == 50
+    assert player.current_hp == 59
+    player.current_hp = 9
+    second = engine.turn(ACTION_ATTACK)
+    assert not any(event.kind == KIND_LAST_STAND for event in second)
+
+
+def test_roar_heals_without_damaging_user() -> None:
+    asad = template(name="أسد", hp=200, speed=10, basic="peck", special="roar")
+    engine, player, _ = fight(asad, template(hp=500, atk=10, dfn=10, speed=6), player_hp=100)
+    events = engine.turn(ACTION_SPECIAL)
+    assert any(event.kind == KIND_HEAL for event in events)
+    assert player.current_hp == 130
+
+
+def test_priority_move_acts_first_next_turn() -> None:
+    falcon = template(name="صقر", speed=6, special="swift")
+    goat = template(name="تمساح", speed=16, atk=10, dfn=10, hp=500)
+    engine, _, _ = fight(falcon, goat)
+    engine.turn(ACTION_SPECIAL)
+    second = engine.turn(ACTION_ATTACK)
+    assert second[0].actor_name == "صقر"
+
+
+def test_counter_event_when_attack_below_defense() -> None:
+    engine, player, _ = fight(
+        template(name="صقر", atk=20, dfn=10, speed=14),
+        template(name="تمساح", atk=5, dfn=30, hp=500),
+    )
+    events = engine.turn(ACTION_ATTACK)
+    counter = [event for event in events if event.kind == KIND_COUNTER]
+    assert counter and counter[0].amount == 10 and player.current_hp == 140
+
+
+def test_flee_action_ends_with_single_event() -> None:
+    engine, _, _ = fight(template(), template())
     events = engine.turn(ACTION_FLEE)
-    assert engine.outcome == OUTCOME_FLED
-    assert len(events) == 1 and events[0].kind == KIND_FLEE
+    assert engine.outcome == OUTCOME_FLED and len(events) == 1
 
 
 def test_no_turn_after_battle_ended() -> None:
-    engine, _, _ = fight()
+    engine, _, _ = fight(template(), template())
     engine.turn(ACTION_FLEE)
     with pytest.raises(RuntimeError):
         engine.turn(ACTION_ATTACK)
 
 
 def test_unknown_action_rejected() -> None:
-    engine, _, _ = fight()
+    engine, _, _ = fight(template(), template())
     with pytest.raises(ValueError):
         engine.turn("dance")
 
 
-def test_player_special_uses_special_move() -> None:
-    engine, _, _ = fight()
-    events = engine.turn(ACTION_SPECIAL)
-    assert events[0].kind == KIND_ATTACK and events[0].move_name == "انقضاض"
-
-
 def test_enemy_uses_special_when_roll_is_low() -> None:
-    engine, _, _ = fight(rng=ConstRng(0.0))
+    crocodile = template(name="تمساح", basic="bite", special="tail")
+    engine, _, _ = fight(template(), crocodile, rng=ConstRng(0.0))
     events = engine.turn(ACTION_ATTACK)
     assert any(event.move_name == "ضربة الذيل" for event in events)
 
 
-def test_critical_text_is_arabic_and_marked() -> None:
-    event = BattleEvent(KIND_ATTACK, "صقر", "تمساح", "نقرة", 19, True)
-    assert "ضربة حرجة" in describe_event(event)
+# ---------- text and state ----------
+
+def test_critical_text_shows_display_units() -> None:
+    text = describe_event(BattleEvent(KIND_ATTACK, "صقر", "تمساح", "نقرة", 150, True))
+    assert "ضربة حرجة" in text and "15" in text
 
 
-def test_flee_text_mentions_retreat() -> None:
-    assert "انسحب" in describe_event(BattleEvent(KIND_FLEE, "صقر", "تمساح"))
+def test_enemy_flee_text() -> None:
+    assert "انسحب" in describe_event(BattleEvent(KIND_ENEMY_FLED, "غزال", "صقر"))
 
 
-def test_healing_party_restores_full_hp() -> None:
-    template = player_template()
+def test_faint_text_names_target() -> None:
+    assert "تراجع" in describe_event(BattleEvent(KIND_FAINT, "تمساح", "صقر"))
+
+
+def test_healing_party_restores_full_hp_and_flags() -> None:
+    saqr = template(animal_id="saqr")
     state = GameState(
-        player_name="الأمين", map_id="village_01", templates={"saqr": template}
+        player_name="الأمين", map_id="village_01", templates={"saqr": saqr}
     )
     state.give_animal("saqr")
     lead = state.lead()
     assert lead is not None
     lead.current_hp = 3
+    lead.last_stand_used = True
     state.heal_party()
-    assert lead.current_hp == lead.max_hp
+    assert lead.current_hp == lead.max_hp and not lead.last_stand_used
