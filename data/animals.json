@@ -1,0 +1,10 @@
+{
+  "saqr_jedi": {"name_ar": "صقر الجديان", "max_hp": 40, "attack": 12, "defense": 8,
+                "speed": 14, "basic_move": "peck", "special_move": "dive"},
+  "ghazal_reem": {"name_ar": "غزال الريم", "max_hp": 34, "attack": 11, "defense": 7,
+                  "speed": 16, "basic_move": "dash", "special_move": "swift_leap"},
+  "timsah_nile": {"name_ar": "تمساح النيل", "max_hp": 48, "attack": 13, "defense": 12,
+                  "speed": 6, "basic_move": "bite", "special_move": "tail_sweep"},
+  "asad_dinder": {"name_ar": "أسد الدندر", "max_hp": 52, "attack": 15, "defense": 9,
+                  "speed": 10, "basic_move": "claw", "special_move": "roar"}
+}

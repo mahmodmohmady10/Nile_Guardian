@@ -115,3 +115,11 @@ def test_player_cannot_walk_into_tree() -> None:
 def test_tilemap_rejects_mismatched_rows() -> None:
     with pytest.raises(ValueError):
         TileMap(3, 2, ["..."], LEGEND)
+
+
+def test_arrival_is_reported_once_per_tile() -> None:
+    ctrl = PlayerController(0, 0, SECONDS_PER_TILE)
+    ctrl.set_held(("right",))
+    run(ctrl, open_field, 9)
+    assert ctrl.pop_arrival() == (1, 0)
+    assert ctrl.pop_arrival() is None

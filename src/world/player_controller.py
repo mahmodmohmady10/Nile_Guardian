@@ -31,6 +31,13 @@ class PlayerController:
         self._target: tuple[int, int] | None = None
         self._progress = 0.0
         self._held: str | None = None
+        self._arrival: tuple[int, int] | None = None
+
+    def pop_arrival(self) -> tuple[int, int] | None:
+        """يُرجع البلاطة التي وصل إليها اللاعب مرة واحدة فقط."""
+        arrival = self._arrival
+        self._arrival = None
+        return arrival
 
     @property
     def is_moving(self) -> bool:
@@ -51,6 +58,7 @@ class PlayerController:
         self._progress += dt / self._seconds_per_tile
         if self._progress >= 1.0 - _EPSILON:
             self.x, self.y = self._target  # type: ignore[misc]
+            self._arrival = (self.x, self.y)
             self._target = None
             self._progress = 0.0
             if self._held is not None:

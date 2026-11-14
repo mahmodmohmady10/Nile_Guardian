@@ -1,0 +1,10 @@
+{
+  "peck": {"name_ar": "نقرة", "power": 30, "accuracy": 95},
+  "dive": {"name_ar": "انقضاض", "power": 50, "accuracy": 75},
+  "dash": {"name_ar": "اندفاعة", "power": 28, "accuracy": 95},
+  "swift_leap": {"name_ar": "وثبة سريعة", "power": 48, "accuracy": 80},
+  "bite": {"name_ar": "عضة", "power": 32, "accuracy": 90},
+  "tail_sweep": {"name_ar": "ضربة الذيل", "power": 46, "accuracy": 78},
+  "claw": {"name_ar": "مخلب", "power": 30, "accuracy": 92},
+  "roar": {"name_ar": "زئير", "power": 52, "accuracy": 70}
+}

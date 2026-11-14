@@ -81,5 +81,94 @@
       "event_id": null
     }
   ],
-  "events": []
+  "events": [
+    {
+      "id": "village_arrival",
+      "trigger": {
+        "type": "on_map_enter"
+      },
+      "conditions": [
+        {
+          "type": "flag_not_set",
+          "flag": "arrived_village"
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_flag",
+          "flag": "arrived_village"
+        },
+        {
+          "type": "dialogue",
+          "dialogue_id": "village_arrival"
+        }
+      ]
+    },
+    {
+      "id": "elder_first_meeting",
+      "trigger": {
+        "type": "on_interact",
+        "npc_id": "elder_tayeb"
+      },
+      "conditions": [
+        {
+          "type": "flag_not_set",
+          "flag": "got_starter"
+        }
+      ],
+      "actions": [
+        {
+          "type": "dialogue",
+          "dialogue_id": "elder_tayeb"
+        },
+        {
+          "type": "give_animal",
+          "animal_id": "saqr_jedi"
+        },
+        {
+          "type": "set_flag",
+          "flag": "got_starter"
+        }
+      ]
+    },
+    {
+      "id": "elder_return",
+      "trigger": {
+        "type": "on_interact",
+        "npc_id": "elder_tayeb"
+      },
+      "conditions": [
+        {
+          "type": "flag_set",
+          "flag": "got_starter"
+        }
+      ],
+      "actions": [
+        {
+          "type": "dialogue",
+          "dialogue_id": "elder_return"
+        }
+      ]
+    }
+  ],
+  "encounter_zones": [
+    {
+      "id": "north_fields",
+      "x": 1,
+      "y": 1,
+      "width": 8,
+      "height": 2,
+      "rate_percent": 20,
+      "table": [
+        {
+          "animal_id": "ghazal_reem",
+          "weight": 3
+        },
+        {
+          "animal_id": "timsah_nile",
+          "weight": 1
+        }
+      ]
+    }
+  ]
 }
