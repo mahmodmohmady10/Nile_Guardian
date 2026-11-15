@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 import pygame
 
-from src.config import ACCENT_COLOR, MOVE_SECONDS_PER_TILE, TEXT_COLOR, TILE_SIZE
+from src.config import ACCENT_COLOR, MOVE_SECONDS_PER_TILE, TEXT_COLOR, TILE_SIZE, WIDTH
 from src.core.event_system import (
     ON_INTERACT,
     ON_MAP_ENTER,
@@ -53,7 +53,11 @@ class WorldScene(BaseScene):
         guide: GuideData,
         renderer: TextRenderer,
         on_map_changed: Callable[[], None],
+        open_shop: Callable[[], None],
+        open_hospital: Callable[[], None],
     ) -> None:
+        self._open_shop = open_shop
+        self._open_hospital = open_hospital
         self._state = state
         self._on_map_changed = on_map_changed
         self._load_map = load_map
@@ -139,8 +143,15 @@ class WorldScene(BaseScene):
             return
         dx, dy = DIRECTIONS[self._player.facing]
         npc = self._npc_at.get((self._player.x + dx, self._player.y + dy))
-        if npc is not None:
-            self._trigger(Trigger(ON_INTERACT, npc_id=npc.id))
+        if npc is None:
+            return
+        if npc.role == "shop":
+            self._open_shop()
+            return
+        if npc.role == "hospital":
+            self._open_hospital()
+            return
+        self._trigger(Trigger(ON_INTERACT, npc_id=npc.id))
 
     def _maybe_encounter(self, x: int, y: int) -> None:
         if self._state.lead() is None:
@@ -168,6 +179,8 @@ class WorldScene(BaseScene):
         )
         pygame.draw.rect(surface, PLAYER_COLOR, rect)
         self._draw_guide(surface, px, py)
+        money = self._renderer.render_line(f"النقود: {self._state.money}", 24, ACCENT_COLOR)
+        surface.blit(money, (WIDTH - money.get_width() - 10, 40))
         self.draw_text(surface, "ESC: menu   ENTER: talk", (10, 8), TEXT_COLOR, 24)
 
     def _draw_guide(self, surface: pygame.Surface, visual_x: float, visual_y: float) -> None:

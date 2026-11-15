@@ -27,7 +27,8 @@
     "flee_at_percent": 30,
     "last_stand": null,
     "basic_move": "dash",
-    "special_move": "swift_leap"
+    "special_move": "swift_leap",
+    "reward_money": 10
   },
   "timsah_nile": {
     "name_ar": "تمساح النيل",
@@ -42,12 +43,13 @@
     "flee_at_percent": null,
     "last_stand": null,
     "basic_move": "bite",
-    "special_move": "tail_sweep"
+    "special_move": "tail_sweep",
+    "reward_money": 20
   },
   "asad_dinder": {
     "name_ar": "أسد الدندر",
     "max_hp": 200,
-    "attack": 45,
+    "attack": 49,
     "defense": 30,
     "speed": 10,
     "crit_chance": 0.025,
@@ -61,7 +63,8 @@
     },
     "basic_move": "claw",
     "special_move": "roar",
-    "catchable": false
+    "catchable": false,
+    "reward_money": 50
   },
   "wolf": {
     "name_ar": "ذئب",
@@ -76,7 +79,8 @@
     "flee_at_percent": 25,
     "last_stand": null,
     "basic_move": "bite",
-    "special_move": "fang_hunt"
+    "special_move": "fang_hunt",
+    "reward_money": 25
   },
   "leopard": {
     "name_ar": "نمر",
@@ -91,6 +95,7 @@
     "flee_at_percent": null,
     "last_stand": null,
     "basic_move": "claw",
-    "special_move": "pounce"
+    "special_move": "pounce",
+    "reward_money": 30
   }
 }

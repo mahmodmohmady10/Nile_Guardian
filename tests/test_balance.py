@@ -45,7 +45,7 @@ def test_approved_card_values() -> None:
     assert (ghazal.max_hp, ghazal.attack, ghazal.defense) == (100, 20, 30)
     assert ghazal.flee_at_percent == 30
     assert (timsah.max_hp, timsah.attack, timsah.defense) == (200, 50, 25)
-    assert (asad.max_hp, asad.attack, asad.defense) == (200, 45, 30)
+    assert (asad.max_hp, asad.attack, asad.defense) == (200, 49, 30)
     assert asad.last_stand is not None and asad.last_stand.threshold_percent == 5
     assert asad.last_stand.bonus_percent == 25
 
@@ -59,7 +59,7 @@ def test_timsah_is_easy_after_attack_52() -> None:
 
 
 def test_asad_is_the_real_challenge() -> None:
-    assert 60 <= win_rate("asad_dinder") <= 85
+    assert 35 <= win_rate("asad_dinder") <= 55
 
 
 def test_wolf_is_medium_hard() -> None:
@@ -74,3 +74,21 @@ def test_difficulty_ladder_is_monotonic() -> None:
     ladder = ["ghazal_reem", "timsah_nile", "wolf", "leopard", "asad_dinder"]
     rates = [win_rate(animal) for animal in ladder]
     assert all(rates[i] >= rates[i + 1] for i in range(len(rates) - 1)), rates
+
+
+def test_upgraded_falcon_still_faces_a_challenge() -> None:
+    from src.logic.models import upgraded_template
+
+    cat = catalog()
+    upgraded = upgraded_template(cat.animals["saqr_jedi"])
+    wins = 0
+    for seed in range(SAMPLES):
+        player = AnimalInstance.fresh(upgraded)
+        enemy = AnimalInstance.fresh(cat.animals["asad_dinder"])
+        engine = BattleEngine([player], enemy, cat.moves, random.Random(seed))
+        turn = 0
+        while engine.outcome is None and turn < 300:
+            engine.turn(ACTION_SPECIAL if turn % 3 == 2 else ACTION_ATTACK)
+            turn += 1
+        wins += engine.outcome in (OUTCOME_WON, OUTCOME_ENEMY_FLED)
+    assert wins / SAMPLES * 100 >= 80

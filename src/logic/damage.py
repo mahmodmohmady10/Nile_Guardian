@@ -26,8 +26,10 @@ def compute_attack(
     defender: AnimalInstance,
     multiplier: float,
     rng: random.Random,
+    defense: float | None = None,
 ) -> AttackResult:
-    difference = attacker.template.attack - defender.template.defense
+    effective_defense = defender.template.defense if defense is None else defense
+    difference = attacker.template.attack - effective_defense
     if difference < 0:
         return AttackResult(damage=0, self_damage=-difference, critical=False)
     if difference == 0:

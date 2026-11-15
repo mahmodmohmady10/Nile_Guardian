@@ -22,7 +22,7 @@ from src.core.event_system import (
     EventSpec,
     Trigger,
 )
-from src.logic.models import AnimalTemplate, Effect, LastStand, Move
+from src.logic.models import AnimalTemplate, Effect, Item, LastStand, Move
 from src.world.encounters import EncounterEntry, EncounterZone
 from src.world.objectives import (
     DONE_DEFEATED,
@@ -60,6 +60,7 @@ class NpcSpec:
     x: int
     y: int
     event_id: str | None
+    role: str = "talk"
 
 
 @dataclass(frozen=True)
@@ -198,6 +199,9 @@ def validate_animals(data: Any, moves: dict[str, Move], source: str) -> dict[str
                 raise MapValidationError(source, f"{field}.last_stand.bonus_percent", "بين 1 و100")
             last = LastStand(threshold, bonus)
         catchable = body.get("catchable", True)
+        reward = body.get("reward_money", 0)
+        if not _is_int(reward) or reward < 0:
+            raise MapValidationError(source, f"{field}.reward_money", "مكافأة صحيحة غير سالبة")
         if not isinstance(catchable, bool):
             raise MapValidationError(source, f"{field}.catchable", "يجب أن يكون true أو false")
         for slot in ("basic_move", "special_move"):
@@ -221,6 +225,7 @@ def validate_animals(data: Any, moves: dict[str, Move], source: str) -> dict[str
             flee_at_percent=flee,
             last_stand=last,
             catchable=catchable,
+            reward_money=reward,
         )
     return animals
 
@@ -480,7 +485,10 @@ def _parse_npcs(
                 source, f"{field}.event_id", f"يشير إلى حدث غير موجود: {event_id}"
             )
         seen.add(npc_id)
-        npcs.append(NpcSpec(npc_id, name, x, y, event_id))
+        role = item.get("role", "talk")
+        if role not in ("talk", "shop", "hospital"):
+            raise MapValidationError(source, f"{field}.role", "talk أو shop أو hospital")
+        npcs.append(NpcSpec(npc_id, name, x, y, event_id, role))
     return npcs
 
 
@@ -516,7 +524,7 @@ def validate_dialogues(data: Any, source: str) -> dict[str, Dialogue]:
 
 def check_npc_dialogues(spec: MapSpec, dialogues: dict[str, Dialogue], source: str) -> None:
     for npc in spec.npcs:
-        if npc.id not in dialogues:
+        if npc.role == "talk" and npc.id not in dialogues:
             raise MapValidationError(
                 source, f"npcs.{npc.id}", "لا يوجد حوار بهذا المعرّف في dialogues.json"
             )
@@ -695,3 +703,26 @@ def build_guide(maps: dict[str, MapSpec], objectives: tuple[Objective, ...]) -> 
                     )
         gates[map_id] = local_gates
     return GuideData(objectives=objectives, points=points, gates=gates)
+
+
+# ---------- items ----------
+
+def load_items_file(path: Path) -> dict[str, Item]:
+    data, source = _read_json(path)
+    return validate_items(data, source)
+
+
+def validate_items(data: Any, source: str) -> dict[str, Item]:
+    if not isinstance(data, dict):
+        raise MapValidationError(source, "<root>", "يجب أن يكون الجذر كائناً")
+    items: dict[str, Item] = {}
+    for item_id, body in data.items():
+        if not isinstance(body, dict):
+            raise MapValidationError(source, item_id, "يجب أن يكون كائناً")
+        if not _is_text(body.get("name_ar")):
+            raise MapValidationError(source, f"{item_id}.name_ar", "الاسم العربي مطلوب")
+        price = body.get("price")
+        if not _is_int(price) or price <= 0:
+            raise MapValidationError(source, f"{item_id}.price", "سعر موجب صحيح مطلوب")
+        items[item_id] = Item(item_id, body["name_ar"], price)
+    return items

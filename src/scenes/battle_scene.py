@@ -1,4 +1,4 @@
-"""شاشة المعركة: الأفعال، والتبديل، والاصطياد، والاستبدال عند امتلاء الفريق، ونهاية المعركة."""
+"""شاشة المعركة: الأفعال، والتبديل، والاصطياد، والعناصر، والاستبدال، ونهاية المعركة."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from src.logic.battle_engine import (
     ACTION_ATTACK,
     ACTION_CAPTURE,
     ACTION_FLEE,
+    ACTION_ITEM,
     ACTION_SPECIAL,
     ACTION_SWITCH,
     OUTCOME_CAPTURED,
@@ -30,6 +31,7 @@ LABELS = {
     ACTION_SPECIAL: "مهارة",
     ACTION_SWITCH: "تبديل",
     ACTION_CAPTURE: "اصطياد",
+    ACTION_ITEM: "عنصر",
     ACTION_FLEE: "انسحاب",
 }
 END_TEXT = {
@@ -39,8 +41,10 @@ END_TEXT = {
     OUTCOME_ENEMY_FLED: "انسحب الخصم، وفزت بالمعركة!",
     OUTCOME_CAPTURED: "انضم الحيوان إلى فريقك!",
 }
+USABLE_ITEMS = ("heal", "power", "defense")
 PHASE_MENU = "menu"
 PHASE_SWITCH = "switch"
+PHASE_ITEM = "item"
 PHASE_LOG = "log"
 PHASE_REPLACE = "replace"
 PHASE_END = "end"
@@ -62,13 +66,18 @@ class BattleScene(BaseScene):
         engine: BattleEngine,
         renderer: TextRenderer,
         on_finish: Callable[[str], None],
+        bag: dict[str, int],
+        item_names: dict[str, str],
     ) -> None:
         self._engine = engine
         self._renderer = renderer
         self._on_finish = on_finish
+        self._bag = bag
+        self._item_names = item_names
         self._phase = PHASE_MENU
         self._index = 0
         self._candidates: list[int] = []
+        self._items: list[str] = []
         self._lines: list[str] = []
 
     def _entries(self) -> list[str]:
@@ -77,14 +86,25 @@ class BattleScene(BaseScene):
             entries.append(ACTION_SWITCH)
         if self._engine.can_capture():
             entries.append(ACTION_CAPTURE)
+        if self._usable_items():
+            entries.append(ACTION_ITEM)
         entries.append(ACTION_FLEE)
         return entries
+
+    def _usable_items(self) -> list[str]:
+        return [
+            item_id
+            for item_id in USABLE_ITEMS
+            if self._bag.get(item_id, 0) > 0 and self._engine.can_use_item(item_id)
+        ]
 
     def handle_action(self, action: str) -> None:
         if self._phase == PHASE_MENU:
             self._handle_menu(action)
         elif self._phase == PHASE_SWITCH:
             self._handle_switch(action)
+        elif self._phase == PHASE_ITEM:
+            self._handle_item(action)
         elif self._phase == PHASE_LOG and action == "confirm":
             self._after_log()
         elif self._phase == PHASE_REPLACE:
@@ -107,6 +127,10 @@ class BattleScene(BaseScene):
                 self._candidates = self._engine.switch_candidates()
                 self._index = 0
                 self._phase = PHASE_SWITCH
+            elif chosen == ACTION_ITEM:
+                self._items = self._usable_items()
+                self._index = 0
+                self._phase = PHASE_ITEM
             else:
                 self._play(chosen)
 
@@ -121,6 +145,24 @@ class BattleScene(BaseScene):
             self._index = 0
             self._phase = PHASE_MENU
 
+    def _handle_item(self, action: str) -> None:
+        if action == "up" and self._items:
+            self._index = (self._index - 1) % len(self._items)
+        elif action == "down" and self._items:
+            self._index = (self._index + 1) % len(self._items)
+        elif action == "confirm" and self._items:
+            item_id = self._items[self._index]
+            self._consume(item_id)
+            self._play(ACTION_ITEM, item_id)
+        elif action == "cancel":
+            self._index = 0
+            self._phase = PHASE_MENU
+
+    def _consume(self, item_id: str) -> None:
+        self._bag[item_id] -= 1
+        if self._bag[item_id] <= 0:
+            del self._bag[item_id]
+
     def _handle_replace(self, action: str) -> None:
         size = len(self._engine.party)
         if action == "up":
@@ -131,7 +173,7 @@ class BattleScene(BaseScene):
             self._engine.replace_member(self._index)
             self._phase = PHASE_END
 
-    def _play(self, action: str, target: int | None = None) -> None:
+    def _play(self, action: str, target: int | str | None = None) -> None:
         events = self._engine.turn(action, target)
         self._lines = [describe_event(event) for event in events]
         self._index = 0
@@ -157,7 +199,9 @@ class BattleScene(BaseScene):
         if self._phase == PHASE_MENU:
             self._draw_options(surface, panel, [LABELS[a] for a in self._entries()])
         elif self._phase == PHASE_SWITCH:
-            rows = [self._member_label(i) for i in self._candidates]
+            self._draw_options(surface, panel, [self._member_label(i) for i in self._candidates])
+        elif self._phase == PHASE_ITEM:
+            rows = [f"{self._item_names.get(i, i)} ×{self._bag.get(i, 0)}" for i in self._items]
             self._draw_options(surface, panel, rows)
         elif self._phase == PHASE_REPLACE:
             rows = ["استبدل " + self._member_label(i) for i in range(len(self._engine.party))]

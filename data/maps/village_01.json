@@ -79,6 +79,22 @@
       "x": 10,
       "y": 8,
       "event_id": null
+    },
+    {
+      "id": "merchant",
+      "name_ar": "التاجر",
+      "x": 6,
+      "y": 11,
+      "event_id": null,
+      "role": "shop"
+    },
+    {
+      "id": "nurse",
+      "name_ar": "الممرضة",
+      "x": 16,
+      "y": 11,
+      "event_id": null,
+      "role": "hospital"
     }
   ],
   "events": [

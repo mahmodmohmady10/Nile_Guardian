@@ -12,6 +12,9 @@ from src.logic.battle_engine import (
     KIND_FAINT,
     KIND_FLEE,
     KIND_HEAL,
+    KIND_ITEM_DEFENSE,
+    KIND_ITEM_HEAL,
+    KIND_ITEM_POWER,
     KIND_LAST_STAND,
     KIND_NO_EFFECT,
     KIND_SWITCH,
@@ -45,6 +48,12 @@ def describe_event(event: BattleEvent) -> str:
         )
     if kind == KIND_LAST_STAND:
         return f"{event.actor_name} استجمع قوته واستعاد {_display(event.amount)} من الحيوية!"
+    if kind == KIND_ITEM_HEAL:
+        return f"{event.actor_name} استعاد {_display(event.amount)} من الحيوية بالشفاء."
+    if kind == KIND_ITEM_POWER:
+        return f"{event.actor_name} استعد لضربة قوية واحدة."
+    if kind == KIND_ITEM_DEFENSE:
+        return f"ارتفع دفاع {event.actor_name} حتى نهاية المعركة."
     if kind == KIND_SWITCH:
         return f"{event.actor_name} دخل المعركة بدلاً من الحيوان السابق."
     if kind == KIND_AUTO_SWITCH:

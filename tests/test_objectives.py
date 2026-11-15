@@ -29,7 +29,6 @@ from src.world.objectives import (
     resolve_point,
 )
 
-
 SEQUENCE = (
     Objective("talk", "تحدث", "village_01", TARGET_NPC, "elder", DONE_FLAG, "got_starter"),
     Objective(

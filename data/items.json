@@ -1,0 +1,14 @@
+{
+  "heal": {
+    "name_ar": "شفاء",
+    "price": 30
+  },
+  "power": {
+    "name_ar": "قوة",
+    "price": 45
+  },
+  "defense": {
+    "name_ar": "دفاع",
+    "price": 60
+  }
+}

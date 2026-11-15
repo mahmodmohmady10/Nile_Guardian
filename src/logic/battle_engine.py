@@ -20,6 +20,7 @@ ACTION_SPECIAL = "special"
 ACTION_FLEE = "flee"
 ACTION_SWITCH = "switch"
 ACTION_CAPTURE = "capture"
+ACTION_ITEM = "item"
 
 KIND_ATTACK = "attack"
 KIND_COUNTER = "counter"
@@ -33,6 +34,9 @@ KIND_SWITCH = "switch"
 KIND_AUTO_SWITCH = "auto_switch"
 KIND_CAPTURED = "captured"
 KIND_CAPTURE_FAILED = "capture_failed"
+KIND_ITEM_HEAL = "item_heal"
+KIND_ITEM_POWER = "item_power"
+KIND_ITEM_DEFENSE = "item_defense"
 
 OUTCOME_WON = "won"
 OUTCOME_LOST = "lost"
@@ -46,6 +50,9 @@ CAPTURE_CHANCE = 0.5
 EXTRA_EFFECT = "extra_damage"
 HEAL_EFFECT = "heal_percent"
 PRIORITY_EFFECT = "priority_next_turn"
+HEAL_ITEM_PERCENT = 50
+POWER_MULTIPLIER = 5.0
+DEFENSE_BOOST = 1.5
 
 
 @dataclass(frozen=True)
@@ -78,6 +85,8 @@ class BattleEngine:
         self._active = active
         self.outcome: str | None = None
         self.captured: AnimalInstance | None = None
+        self._power_armed: set[int] = set()
+        self._defense_boosted: set[int] = set()
 
     @property
     def player(self) -> AnimalInstance:
@@ -113,7 +122,7 @@ class BattleEngine:
             raise RuntimeError("لا يوجد حيوان مُصطاد")
         self.party[index] = self.captured
 
-    def turn(self, action: str, target: int | None = None) -> list[BattleEvent]:
+    def turn(self, action: str, target: int | str | None = None) -> list[BattleEvent]:
         if self.outcome is not None:
             raise RuntimeError("المعركة انتهت")
         if action == ACTION_FLEE:
@@ -123,6 +132,8 @@ class BattleEngine:
             return self._switch(target)
         if action == ACTION_CAPTURE:
             return self._capture()
+        if action == ACTION_ITEM:
+            return self._use_item(target)
         if action == ACTION_ATTACK:
             player_move = self._moves[self.player.template.basic_move]
         elif action == ACTION_SPECIAL:
@@ -238,7 +249,12 @@ class BattleEngine:
             ]
 
         multiplier = effect.multiplier if effect.kind == EXTRA_EFFECT else 1.0
-        result = compute_attack(attacker, defender, multiplier, self._rng)
+        if attacker is not self.enemy and id(attacker) in self._power_armed:
+            multiplier *= POWER_MULTIPLIER
+            self._power_armed.discard(id(attacker))
+        result = compute_attack(
+            attacker, defender, multiplier, self._rng, defense=self._defense_of(defender)
+        )
         events: list[BattleEvent] = []
         if result.self_damage:
             attacker.current_hp = max(0, attacker.current_hp - result.self_damage)
@@ -260,6 +276,43 @@ class BattleEngine:
             events.append(
                 BattleEvent(KIND_NO_EFFECT, attacker.name_ar, defender.name_ar, move.name_ar)
             )
+        return events
+
+    def _defense_of(self, animal: AnimalInstance) -> float:
+        base = float(animal.template.defense)
+        return base * DEFENSE_BOOST if id(animal) in self._defense_boosted else base
+
+    def can_use_item(self, item_id: str) -> bool:
+        if self.outcome is not None:
+            return False
+        player = self.player
+        if item_id == "heal":
+            return player.current_hp < player.max_hp
+        if item_id == "power":
+            return id(player) not in self._power_armed
+        if item_id == "defense":
+            return id(player) not in self._defense_boosted
+        return False
+
+    def _use_item(self, item_id: int | str | None) -> list[BattleEvent]:
+        if not isinstance(item_id, str) or not self.can_use_item(item_id):
+            raise ValueError("لا يمكن استخدام هذا العنصر الآن")
+        player = self.player
+        if item_id == "heal":
+            heal = (player.max_hp - player.current_hp) * HEAL_ITEM_PERCENT // 100
+            player.current_hp += heal
+            events = [BattleEvent(KIND_ITEM_HEAL, player.name_ar, player.name_ar, "شفاء", heal)]
+        elif item_id == "power":
+            self._power_armed.add(id(player))
+            events = [BattleEvent(KIND_ITEM_POWER, player.name_ar, player.name_ar)]
+        else:
+            self._defense_boosted.add(id(player))
+            events = [BattleEvent(KIND_ITEM_DEFENSE, player.name_ar, player.name_ar)]
+        for animal in self.party:
+            animal.priority_next = False
+        enemy_move = self._moves[self._choose_enemy_move_id()]
+        events.extend(self._act(self.enemy, player, enemy_move))
+        self._resolve_player_faint(events)
         return events
 
     def _enemy_fled(self) -> bool:

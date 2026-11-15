@@ -18,6 +18,8 @@ class GameState:
     party: list[AnimalInstance] = field(default_factory=list)
     flags: set[str] = field(default_factory=set)
     defeated: set[str] = field(default_factory=set)
+    money: int = 0
+    bag: dict[str, int] = field(default_factory=dict)
 
     def has_flag(self, flag: str) -> bool:
         return flag in self.flags
@@ -41,3 +43,19 @@ class GameState:
     def heal_party(self) -> None:
         for animal in self.party:
             animal.heal_full()
+
+    def add_money(self, amount: int) -> None:
+        self.money += amount
+
+    def spend(self, amount: int) -> bool:
+        if self.money < amount:
+            return False
+        self.money -= amount
+        return True
+
+    def add_item(self, item_id: str) -> None:
+        self.bag[item_id] = self.bag.get(item_id, 0) + 1
+
+    def award_xp(self, amount: int) -> None:
+        for animal in self.party:
+            animal.xp += amount
