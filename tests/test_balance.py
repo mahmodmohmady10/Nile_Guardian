@@ -28,7 +28,7 @@ def win_rate(enemy_id: str) -> float:
     for seed in range(SAMPLES):
         player = AnimalInstance.fresh(cat.animals["saqr_jedi"])
         enemy = AnimalInstance.fresh(cat.animals[enemy_id])
-        engine = BattleEngine(player, enemy, cat.moves, random.Random(seed))
+        engine = BattleEngine([player], enemy, cat.moves, random.Random(seed))
         turn = 0
         while engine.outcome is None and turn < 300:
             engine.turn(ACTION_SPECIAL if turn % 3 == 2 else ACTION_ATTACK)

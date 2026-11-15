@@ -60,7 +60,8 @@
       "bonus_percent": 25
     },
     "basic_move": "claw",
-    "special_move": "roar"
+    "special_move": "roar",
+    "catchable": false
   },
   "wolf": {
     "name_ar": "ذئب",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from src.logic.models import AnimalInstance, AnimalTemplate
+from src.logic.models import MAX_PARTY_SIZE, AnimalInstance, AnimalTemplate
 
 
 @dataclass
@@ -31,6 +31,8 @@ class GameState:
     def give_animal(self, animal_id: str) -> None:
         if any(animal.id == animal_id for animal in self.party):
             return
+        if len(self.party) >= MAX_PARTY_SIZE:
+            raise ValueError("الفريق ممتلئ")
         self.party.append(AnimalInstance.fresh(self.templates[animal_id]))
 
     def lead(self) -> AnimalInstance | None:

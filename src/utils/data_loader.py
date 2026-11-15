@@ -197,6 +197,9 @@ def validate_animals(data: Any, moves: dict[str, Move], source: str) -> dict[str
             if not _is_int(bonus) or not 1 <= bonus <= 100:
                 raise MapValidationError(source, f"{field}.last_stand.bonus_percent", "بين 1 و100")
             last = LastStand(threshold, bonus)
+        catchable = body.get("catchable", True)
+        if not isinstance(catchable, bool):
+            raise MapValidationError(source, f"{field}.catchable", "يجب أن يكون true أو false")
         for slot in ("basic_move", "special_move"):
             if body.get(slot) not in moves:
                 raise MapValidationError(
@@ -217,6 +220,7 @@ def validate_animals(data: Any, moves: dict[str, Move], source: str) -> dict[str
             variance_max=float(vmax),
             flee_at_percent=flee,
             last_stand=last,
+            catchable=catchable,
         )
     return animals
 

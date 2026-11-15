@@ -1,4 +1,4 @@
-"""شاشة المعركة: اختيار الفعل، وعرض السجل، ونهاية المعركة."""
+"""شاشة المعركة: الأفعال، والتبديل، والاصطياد، والاستبدال عند امتلاء الفريق، ونهاية المعركة."""
 
 from __future__ import annotations
 
@@ -10,8 +10,11 @@ from src.config import ACCENT_COLOR, TEXT_COLOR
 from src.engine.text_renderer import TextRenderer
 from src.logic.battle_engine import (
     ACTION_ATTACK,
+    ACTION_CAPTURE,
     ACTION_FLEE,
     ACTION_SPECIAL,
+    ACTION_SWITCH,
+    OUTCOME_CAPTURED,
     OUTCOME_ENEMY_FLED,
     OUTCOME_FLED,
     OUTCOME_LOST,
@@ -22,15 +25,24 @@ from src.logic.battle_text import describe_event
 from src.logic.models import AnimalInstance
 from src.scenes.base_scene import BaseScene
 
-MENU_ITEMS = (("هجوم", ACTION_ATTACK), ("مهارة", ACTION_SPECIAL), ("انسحاب", ACTION_FLEE))
+LABELS = {
+    ACTION_ATTACK: "هجوم",
+    ACTION_SPECIAL: "مهارة",
+    ACTION_SWITCH: "تبديل",
+    ACTION_CAPTURE: "اصطياد",
+    ACTION_FLEE: "انسحاب",
+}
 END_TEXT = {
     OUTCOME_WON: "انتصر الأمين!",
-    OUTCOME_LOST: "تراجع الرفيق، وعاد الأمين إلى القرية.",
+    OUTCOME_LOST: "سقط الفريق، وعاد الأمين إلى القرية.",
     OUTCOME_FLED: "انسحب الأمين من المعركة.",
     OUTCOME_ENEMY_FLED: "انسحب الخصم، وفزت بالمعركة!",
+    OUTCOME_CAPTURED: "انضم الحيوان إلى فريقك!",
 }
 PHASE_MENU = "menu"
+PHASE_SWITCH = "switch"
 PHASE_LOG = "log"
+PHASE_REPLACE = "replace"
 PHASE_END = "end"
 BG_COLOR = (18, 24, 32)
 PANEL_COLOR = (14, 20, 30)
@@ -38,6 +50,10 @@ ENEMY_COLOR = (200, 90, 90)
 ALLY_COLOR = (100, 200, 130)
 BAR_BG_COLOR = (60, 60, 70)
 BAR_WIDTH = 300
+
+
+def _display(value: int) -> str:
+    return f"{value / 10:g}"
 
 
 class BattleScene(BaseScene):
@@ -52,27 +68,84 @@ class BattleScene(BaseScene):
         self._on_finish = on_finish
         self._phase = PHASE_MENU
         self._index = 0
+        self._candidates: list[int] = []
         self._lines: list[str] = []
+
+    def _entries(self) -> list[str]:
+        entries = [ACTION_ATTACK, ACTION_SPECIAL]
+        if self._engine.can_switch():
+            entries.append(ACTION_SWITCH)
+        if self._engine.can_capture():
+            entries.append(ACTION_CAPTURE)
+        entries.append(ACTION_FLEE)
+        return entries
 
     def handle_action(self, action: str) -> None:
         if self._phase == PHASE_MENU:
             self._handle_menu(action)
+        elif self._phase == PHASE_SWITCH:
+            self._handle_switch(action)
         elif self._phase == PHASE_LOG and action == "confirm":
-            self._phase = PHASE_END if self._engine.outcome is not None else PHASE_MENU
+            self._after_log()
+        elif self._phase == PHASE_REPLACE:
+            self._handle_replace(action)
         elif self._phase == PHASE_END and action == "confirm":
             outcome = self._engine.outcome
             if outcome is not None:
                 self._on_finish(outcome)
 
     def _handle_menu(self, action: str) -> None:
+        entries = self._entries()
+        self._index %= len(entries)
         if action == "up":
-            self._index = (self._index - 1) % len(MENU_ITEMS)
+            self._index = (self._index - 1) % len(entries)
         elif action == "down":
-            self._index = (self._index + 1) % len(MENU_ITEMS)
+            self._index = (self._index + 1) % len(entries)
         elif action == "confirm":
-            events = self._engine.turn(MENU_ITEMS[self._index][1])
-            self._lines = [describe_event(event) for event in events]
-            self._phase = PHASE_LOG
+            chosen = entries[self._index]
+            if chosen == ACTION_SWITCH:
+                self._candidates = self._engine.switch_candidates()
+                self._index = 0
+                self._phase = PHASE_SWITCH
+            else:
+                self._play(chosen)
+
+    def _handle_switch(self, action: str) -> None:
+        if action == "up" and self._candidates:
+            self._index = (self._index - 1) % len(self._candidates)
+        elif action == "down" and self._candidates:
+            self._index = (self._index + 1) % len(self._candidates)
+        elif action == "confirm" and self._candidates:
+            self._play(ACTION_SWITCH, self._candidates[self._index])
+        elif action == "cancel":
+            self._index = 0
+            self._phase = PHASE_MENU
+
+    def _handle_replace(self, action: str) -> None:
+        size = len(self._engine.party)
+        if action == "up":
+            self._index = (self._index - 1) % size
+        elif action == "down":
+            self._index = (self._index + 1) % size
+        elif action == "confirm":
+            self._engine.replace_member(self._index)
+            self._phase = PHASE_END
+
+    def _play(self, action: str, target: int | None = None) -> None:
+        events = self._engine.turn(action, target)
+        self._lines = [describe_event(event) for event in events]
+        self._index = 0
+        self._phase = PHASE_LOG
+
+    def _after_log(self) -> None:
+        if self._engine.outcome is None:
+            self._index = 0
+            self._phase = PHASE_MENU
+        elif self._engine.needs_replacement():
+            self._index = 0
+            self._phase = PHASE_REPLACE
+        else:
+            self._phase = PHASE_END
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(BG_COLOR)
@@ -82,15 +155,28 @@ class BattleScene(BaseScene):
         pygame.draw.rect(surface, PANEL_COLOR, panel)
         pygame.draw.rect(surface, ACCENT_COLOR, panel, width=2)
         if self._phase == PHASE_MENU:
-            self._draw_menu(surface, panel)
+            self._draw_options(surface, panel, [LABELS[a] for a in self._entries()])
+        elif self._phase == PHASE_SWITCH:
+            rows = [self._member_label(i) for i in self._candidates]
+            self._draw_options(surface, panel, rows)
+        elif self._phase == PHASE_REPLACE:
+            rows = ["استبدل " + self._member_label(i) for i in range(len(self._engine.party))]
+            self._draw_options(surface, panel, rows)
         else:
             self._draw_log(surface, panel)
 
-    def _draw_menu(self, surface: pygame.Surface, panel: pygame.Rect) -> None:
-        for row, (label, _action) in enumerate(MENU_ITEMS):
+    def _member_label(self, index: int) -> str:
+        animal = self._engine.party[index]
+        return f"{animal.name_ar} — {_display(max(0, animal.current_hp))}/{_display(animal.max_hp)}"
+
+    def _draw_options(self, surface: pygame.Surface, panel: pygame.Rect, rows: list[str]) -> None:
+        for row, label in enumerate(rows):
             color = ACCENT_COLOR if row == self._index else TEXT_COLOR
-            rendered = self._renderer.render_line(label, 30, color)
-            surface.blit(rendered, (panel.x + 40, panel.y + 20 + row * 42))
+            marker = "> " if row == self._index else "  "
+            surface.blit(
+                self._renderer.render_line(marker + label, 26, color),
+                (panel.x + 40, panel.y + 16 + row * 36),
+            )
 
     def _draw_log(self, surface: pygame.Surface, panel: pygame.Rect) -> None:
         y = panel.y + 20
@@ -98,8 +184,9 @@ class BattleScene(BaseScene):
             rendered = self._renderer.render_line(line, 24, TEXT_COLOR)
             surface.blit(rendered, (panel.right - 30 - rendered.get_width(), y))
             y += 34
-        if self._phase == PHASE_END and self._engine.outcome is not None:
-            text = END_TEXT[self._engine.outcome]
+        outcome = self._engine.outcome
+        if self._phase == PHASE_END and outcome is not None:
+            text = END_TEXT[outcome]
             rendered = self._renderer.render_line(text, 28, ACCENT_COLOR)
             surface.blit(rendered, (panel.right - 30 - rendered.get_width(), y + 4))
         self.draw_text(surface, "ENTER", (panel.x + 30, panel.bottom - 34), ACCENT_COLOR, 22)
@@ -119,7 +206,7 @@ class BattleScene(BaseScene):
         pygame.draw.rect(surface, color, (x, y + 42, int(BAR_WIDTH * ratio), 16))
         self.draw_text(
             surface,
-            f"HP {max(0, animal.current_hp) / 10:g}/{animal.max_hp / 10:g}",
+            f"HP {_display(max(0, animal.current_hp))}/{_display(animal.max_hp)}",
             (x, y + 64),
             TEXT_COLOR,
             22,

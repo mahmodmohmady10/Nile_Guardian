@@ -133,7 +133,7 @@ def test_wild_battle_always_terminates(seed: int) -> None:
     lead = state.lead()
     assert lead is not None
     enemy = AnimalInstance.fresh(WORLD["catalog"].animals["asad_dinder"])
-    engine = BattleEngine(lead, enemy, WORLD["catalog"].moves, random.Random(seed))
+    engine = BattleEngine([lead], enemy, WORLD["catalog"].moves, random.Random(seed))
     for turn in range(300):
         if engine.outcome is not None:
             break

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+MAX_PARTY_SIZE = 3
+
 
 @dataclass(frozen=True)
 class Effect:
@@ -41,6 +43,7 @@ class AnimalTemplate:
     variance_max: float
     flee_at_percent: int | None
     last_stand: LastStand | None
+    catchable: bool = True
 
 
 @dataclass

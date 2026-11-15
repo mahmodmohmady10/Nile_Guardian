@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from src.logic.battle_engine import (
     KIND_ATTACK,
+    KIND_AUTO_SWITCH,
+    KIND_CAPTURE_FAILED,
+    KIND_CAPTURED,
     KIND_COUNTER,
     KIND_ENEMY_FLED,
     KIND_FAINT,
@@ -11,6 +14,7 @@ from src.logic.battle_engine import (
     KIND_HEAL,
     KIND_LAST_STAND,
     KIND_NO_EFFECT,
+    KIND_SWITCH,
     BattleEvent,
 )
 
@@ -41,6 +45,14 @@ def describe_event(event: BattleEvent) -> str:
         )
     if kind == KIND_LAST_STAND:
         return f"{event.actor_name} استجمع قوته واستعاد {_display(event.amount)} من الحيوية!"
+    if kind == KIND_SWITCH:
+        return f"{event.actor_name} دخل المعركة بدلاً من الحيوان السابق."
+    if kind == KIND_AUTO_SWITCH:
+        return f"{event.actor_name} دخل المعركة بعد تراجع الحيوان السابق."
+    if kind == KIND_CAPTURED:
+        return f"اصطدت {event.target_name}! انضم إلى الفريق بصحة كاملة."
+    if kind == KIND_CAPTURE_FAILED:
+        return "فشلت محاولة الاصطياد."
     if kind == KIND_ATTACK:
         prefix = "ضربة حرجة! " if event.critical else ""
         return (

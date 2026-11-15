@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from src.core.game_state import GameState
-from src.logic.models import AnimalInstance, AnimalTemplate
+from src.logic.models import MAX_PARTY_SIZE, AnimalInstance, AnimalTemplate
 
 SAVE_VERSION = 1
 FACINGS = ("up", "down", "left", "right")
@@ -72,6 +72,8 @@ def restore(
     party_raw = data.get("party")
     if not isinstance(party_raw, list):
         raise SaveError("party", "يجب أن يكون قائمة")
+    if len(party_raw) > MAX_PARTY_SIZE:
+        raise SaveError("party", "الفريق أكبر من الحد المسموح")
     party: list[AnimalInstance] = []
     seen: set[str] = set()
     for index, item in enumerate(party_raw):

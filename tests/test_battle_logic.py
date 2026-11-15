@@ -98,7 +98,7 @@ def fight(
 ) -> tuple[BattleEngine, AnimalInstance, AnimalInstance]:
     p = instance(player, player_hp)
     e = instance(enemy, enemy_hp)
-    engine = BattleEngine(p, e, MOVES, rng or ConstRng(0.5))  # type: ignore[arg-type]
+    engine = BattleEngine([p], e, MOVES, rng or ConstRng(0.5))  # type: ignore[arg-type]
     return engine, p, e
 
 

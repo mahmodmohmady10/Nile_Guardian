@@ -17,7 +17,13 @@ from src.core.scene import Scene
 from src.core.scene_stack import SceneStack
 from src.engine.game import Game
 from src.engine.text_renderer import TextRenderer
-from src.logic.battle_engine import OUTCOME_ENEMY_FLED, OUTCOME_LOST, OUTCOME_WON, BattleEngine
+from src.logic.battle_engine import (
+    OUTCOME_CAPTURED,
+    OUTCOME_ENEMY_FLED,
+    OUTCOME_LOST,
+    OUTCOME_WON,
+    BattleEngine,
+)
 from src.logic.models import AnimalInstance
 from src.scenes.battle_scene import BattleScene
 from src.scenes.confirm_scene import ConfirmScene
@@ -234,17 +240,18 @@ def open_dialogue(session: Session, dialogue_id: str, on_done: Callable[[], None
 
 
 def open_battle(session: Session, enemy_id: str, on_end: Callable[[str], None]) -> None:
-    lead = session.state.lead()
-    if lead is None:
+    if session.state.lead() is None:
         return
     enemy = AnimalInstance.fresh(session.catalog.animals[enemy_id])
-    engine = BattleEngine(lead, enemy, session.catalog.moves, session.rng)
+    engine = BattleEngine(session.state.party, enemy, session.catalog.moves, session.rng)
 
     def finish(outcome: str) -> None:
         if outcome == OUTCOME_LOST:
             session.state.heal_party()
-        if outcome in (OUTCOME_WON, OUTCOME_ENEMY_FLED):
+        if outcome in (OUTCOME_WON, OUTCOME_ENEMY_FLED, OUTCOME_CAPTURED):
             session.state.mark_defeated(enemy_id)
+        if outcome == OUTCOME_CAPTURED and not engine.needs_replacement():
+            session.state.party.append(engine.captured)
         session.stack.pop()
         on_end(outcome)
 
