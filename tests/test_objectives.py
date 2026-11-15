@@ -12,6 +12,7 @@ from src.utils.data_loader import (
     check_objectives,
     load_catalog,
     load_map_file,
+    load_objectives_file,
     validate_objectives,
 )
 from src.utils.paths import resource_path
@@ -143,8 +144,6 @@ def test_real_objectives_match_maps_and_catalog() -> None:
     catalog = load_catalog(
         resource_path("data", "animals.json"), resource_path("data", "moves.json")
     )
-    from src.utils.data_loader import load_objectives_file
-
     objectives = load_objectives_file(resource_path("data", "objectives.json"))
     check_objectives(objectives, maps, catalog, "objectives.json")
     assert [o.id for o in objectives] == [
@@ -157,8 +156,6 @@ def test_real_guide_has_gates_both_ways() -> None:
         "village_01": load_map_file(resource_path("data", "maps", "village_01.json")),
         "dinder_01": load_map_file(resource_path("data", "maps", "dinder_01.json")),
     }
-    from src.utils.data_loader import load_objectives_file
-
     guide = build_guide(maps, load_objectives_file(resource_path("data", "objectives.json")))
     assert guide.gates["village_01"]["dinder_01"][:2] == (0.0, 9.0)
     assert guide.gates["dinder_01"]["village_01"][:2] == (29.0, 9.0)

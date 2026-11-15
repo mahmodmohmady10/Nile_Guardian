@@ -1,4 +1,4 @@
-"""القائمة الرئيسية. تسميات لاتينية مؤقتة حتى M3."""
+"""القائمة الرئيسية: عناصر تتغير حسب حالة اللعبة."""
 
 from __future__ import annotations
 
@@ -7,40 +7,40 @@ from collections.abc import Callable
 import pygame
 
 from src.config import ACCENT_COLOR, TEXT_COLOR
-from src.core.scene import Scene
 from src.core.scene_stack import SceneStack
+from src.engine.text_renderer import TextRenderer
 from src.scenes.base_scene import BaseScene
 
-ITEMS = ("START", "QUIT")
+MenuItems = list[tuple[str, Callable[[], None]]]
 
 
 class MenuScene(BaseScene):
-    def __init__(self, stack: SceneStack, start_world: Callable[[], Scene]) -> None:
+    def __init__(
+        self, stack: SceneStack, renderer: TextRenderer, items: Callable[[], MenuItems]
+    ) -> None:
         self._stack = stack
-        self._start_world = start_world
+        self._renderer = renderer
+        self._items = items
         self._index = 0
 
-    @property
-    def selected(self) -> str:
-        return ITEMS[self._index]
-
     def handle_action(self, action: str) -> None:
+        entries = self._items()
+        if not entries:
+            return
+        self._index %= len(entries)
         if action == "up":
-            self._index = (self._index - 1) % len(ITEMS)
+            self._index = (self._index - 1) % len(entries)
         elif action == "down":
-            self._index = (self._index + 1) % len(ITEMS)
+            self._index = (self._index + 1) % len(entries)
         elif action == "confirm":
-            self._activate(self.selected)
-
-    def _activate(self, item: str) -> None:
-        if item == "START":
-            self._stack.replace(self._start_world())
-        elif item == "QUIT":
-            self._stack.pop()
+            entries[self._index][1]()
 
     def draw(self, surface: pygame.Surface) -> None:
-        self.draw_text(surface, "NILE GUARDIAN (M2)", (60, 60), ACCENT_COLOR, 52)
-        for row, item in enumerate(ITEMS):
-            marker = ">" if row == self._index else " "
-            color = ACCENT_COLOR if row == self._index else TEXT_COLOR
-            self.draw_text(surface, f"{marker} {item}", (80, 180 + row * 50), color, 40)
+        surface.blit(self._renderer.render_line("حارس النيل", 52, ACCENT_COLOR), (60, 60))
+        for row, (label, _action) in enumerate(self._items()):
+            selected = row == self._index
+            color = ACCENT_COLOR if selected else TEXT_COLOR
+            marker = "> " if selected else "  "
+            surface.blit(
+                self._renderer.render_line(marker + label, 36, color), (80, 170 + row * 52)
+            )

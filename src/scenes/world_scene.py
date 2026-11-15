@@ -52,8 +52,10 @@ class WorldScene(BaseScene):
         rng: random.Random,
         guide: GuideData,
         renderer: TextRenderer,
+        on_map_changed: Callable[[], None],
     ) -> None:
         self._state = state
+        self._on_map_changed = on_map_changed
         self._load_map = load_map
         self._on_back = on_back
         self._open_dialogue = open_dialogue
@@ -112,6 +114,7 @@ class WorldScene(BaseScene):
         self._apply(command.map_id, self._load_map(command.map_id))
         self._player = PlayerController(command.x, command.y, MOVE_SECONDS_PER_TILE)
         self._state.grid_x, self._state.grid_y = command.x, command.y
+        self._on_map_changed()
 
     def handle_action(self, action: str) -> None:
         if self._runner.busy:
