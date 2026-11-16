@@ -13,6 +13,7 @@ from src.logic.battle_engine import (
     ACTION_CAPTURE,
     ACTION_FLEE,
     ACTION_ITEM,
+    ACTION_SKILL,
     ACTION_SPECIAL,
     ACTION_SWITCH,
     OUTCOME_CAPTURED,
@@ -45,6 +46,7 @@ USABLE_ITEMS = ("heal", "power", "defense")
 PHASE_MENU = "menu"
 PHASE_SWITCH = "switch"
 PHASE_ITEM = "item"
+PHASE_SKILL = "skill"
 PHASE_LOG = "log"
 PHASE_REPLACE = "replace"
 PHASE_END = "end"
@@ -68,8 +70,10 @@ class BattleScene(BaseScene):
         on_finish: Callable[[str], None],
         bag: dict[str, int],
         item_names: dict[str, str],
+        move_names: dict[str, str],
     ) -> None:
         self._engine = engine
+        self._move_names = move_names
         self._renderer = renderer
         self._on_finish = on_finish
         self._bag = bag
@@ -78,6 +82,7 @@ class BattleScene(BaseScene):
         self._index = 0
         self._candidates: list[int] = []
         self._items: list[str] = []
+        self._skills: list[str] = []
         self._lines: list[str] = []
 
     def _entries(self) -> list[str]:
@@ -105,6 +110,8 @@ class BattleScene(BaseScene):
             self._handle_switch(action)
         elif self._phase == PHASE_ITEM:
             self._handle_item(action)
+        elif self._phase == PHASE_SKILL:
+            self._handle_skill(action)
         elif self._phase == PHASE_LOG and action == "confirm":
             self._after_log()
         elif self._phase == PHASE_REPLACE:
@@ -131,6 +138,10 @@ class BattleScene(BaseScene):
                 self._items = self._usable_items()
                 self._index = 0
                 self._phase = PHASE_ITEM
+            elif chosen == ACTION_SPECIAL:
+                self._skills = list(self._engine.player.available_skill_moves())
+                self._index = 0
+                self._phase = PHASE_SKILL
             else:
                 self._play(chosen)
 
@@ -154,6 +165,21 @@ class BattleScene(BaseScene):
             item_id = self._items[self._index]
             self._consume(item_id)
             self._play(ACTION_ITEM, item_id)
+        elif action == "cancel":
+            self._index = 0
+            self._phase = PHASE_MENU
+
+    def _handle_skill(self, action: str) -> None:
+        if action == "up" and self._skills:
+            self._index = (self._index - 1) % len(self._skills)
+        elif action == "down" and self._skills:
+            self._index = (self._index + 1) % len(self._skills)
+        elif action == "confirm" and self._skills:
+            chosen = self._skills[self._index]
+            if chosen == self._engine.player.template.special_move:
+                self._play(ACTION_SPECIAL)
+            else:
+                self._play(ACTION_SKILL, chosen)
         elif action == "cancel":
             self._index = 0
             self._phase = PHASE_MENU
@@ -202,6 +228,9 @@ class BattleScene(BaseScene):
             self._draw_options(surface, panel, [self._member_label(i) for i in self._candidates])
         elif self._phase == PHASE_ITEM:
             rows = [f"{self._item_names.get(i, i)} ×{self._bag.get(i, 0)}" for i in self._items]
+            self._draw_options(surface, panel, rows)
+        elif self._phase == PHASE_SKILL:
+            rows = [self._move_names.get(move, move) for move in self._skills]
             self._draw_options(surface, panel, rows)
         elif self._phase == PHASE_REPLACE:
             rows = ["استبدل " + self._member_label(i) for i in range(len(self._engine.party))]

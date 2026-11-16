@@ -282,8 +282,16 @@ def open_battle(session: Session, enemy_id: str, on_end: Callable[[str], None]) 
 
     item_names = {item_id: item.name_ar for item_id, item in session.items.items()}
     session.stack.push(
-        BattleScene(engine, session.renderer, on_finish=finish,
-                    bag=session.state.bag, item_names=item_names)
+        BattleScene(
+            engine,
+            session.renderer,
+            on_finish=finish,
+            bag=session.state.bag,
+            item_names=item_names,
+            move_names={
+                move_id: move.name_ar for move_id, move in session.catalog.moves.items()
+            },
+        )
     )
 
 

@@ -12,7 +12,21 @@
     "flee_at_percent": null,
     "last_stand": null,
     "basic_move": "peck",
-    "special_move": "dive"
+    "special_move": "dive",
+    "skills": [
+      {
+        "level": 3,
+        "move": "hawk_strike"
+      },
+      {
+        "level": 5,
+        "move": "leap"
+      },
+      {
+        "level": 7,
+        "move": "swoop"
+      }
+    ]
   },
   "ghazal_reem": {
     "name_ar": "غزال الريم",
@@ -28,7 +42,21 @@
     "last_stand": null,
     "basic_move": "dash",
     "special_move": "swift_leap",
-    "reward_money": 10
+    "reward_money": 10,
+    "skills": [
+      {
+        "level": 3,
+        "move": "quick_hop"
+      },
+      {
+        "level": 5,
+        "move": "charge"
+      },
+      {
+        "level": 7,
+        "move": "storm"
+      }
+    ]
   },
   "timsah_nile": {
     "name_ar": "تمساح النيل",
@@ -44,7 +72,21 @@
     "last_stand": null,
     "basic_move": "bite",
     "special_move": "tail_sweep",
-    "reward_money": 20
+    "reward_money": 20,
+    "skills": [
+      {
+        "level": 3,
+        "move": "heavy_bite"
+      },
+      {
+        "level": 5,
+        "move": "relax"
+      },
+      {
+        "level": 7,
+        "move": "jaw_strike"
+      }
+    ]
   },
   "asad_dinder": {
     "name_ar": "أسد الدندر",
@@ -64,7 +106,21 @@
     "basic_move": "claw",
     "special_move": "roar",
     "catchable": false,
-    "reward_money": 50
+    "reward_money": 50,
+    "skills": [
+      {
+        "level": 3,
+        "move": "heavy_claw"
+      },
+      {
+        "level": 5,
+        "move": "double_roar"
+      },
+      {
+        "level": 7,
+        "move": "majesty"
+      }
+    ]
   },
   "wolf": {
     "name_ar": "ذئب",
@@ -80,7 +136,21 @@
     "last_stand": null,
     "basic_move": "bite",
     "special_move": "fang_hunt",
-    "reward_money": 25
+    "reward_money": 25,
+    "skills": [
+      {
+        "level": 3,
+        "move": "howl"
+      },
+      {
+        "level": 5,
+        "move": "fang_power"
+      },
+      {
+        "level": 7,
+        "move": "chase"
+      }
+    ]
   },
   "leopard": {
     "name_ar": "نمر",
@@ -96,6 +166,20 @@
     "last_stand": null,
     "basic_move": "claw",
     "special_move": "pounce",
-    "reward_money": 30
+    "reward_money": 30,
+    "skills": [
+      {
+        "level": 3,
+        "move": "snatch"
+      },
+      {
+        "level": 5,
+        "move": "ambush_leap"
+      },
+      {
+        "level": 7,
+        "move": "ambush"
+      }
+    ]
   }
 }

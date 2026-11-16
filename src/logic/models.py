@@ -53,6 +53,7 @@ class AnimalTemplate:
     last_stand: LastStand | None
     catchable: bool = True
     reward_money: int = 0
+    skills: tuple[tuple[int, str], ...] = ()
 
 
 @dataclass
@@ -87,6 +88,11 @@ class AnimalInstance:
     @property
     def level(self) -> int:
         return 1 + sum(1 for threshold in LEVEL_THRESHOLDS if self.xp >= threshold)
+
+    def available_skill_moves(self) -> tuple[str, ...]:
+        """المهارة الأساسية ثم المهارات المفتوحة حسب المستوى."""
+        unlocked = tuple(move for level, move in self.template.skills if self.level >= level)
+        return (self.template.special_move,) + unlocked
 
     @property
     def can_upgrade(self) -> bool:

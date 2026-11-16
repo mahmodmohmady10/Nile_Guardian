@@ -204,6 +204,17 @@ def validate_animals(data: Any, moves: dict[str, Move], source: str) -> dict[str
             raise MapValidationError(source, f"{field}.reward_money", "مكافأة صحيحة غير سالبة")
         if not isinstance(catchable, bool):
             raise MapValidationError(source, f"{field}.catchable", "يجب أن يكون true أو false")
+        skills_raw = body.get("skills", [])
+        if not isinstance(skills_raw, list):
+            raise MapValidationError(source, f"{field}.skills", "قائمة مهارات")
+        skills: list[tuple[int, str]] = []
+        for index, entry in enumerate(skills_raw):
+            entry_field = f"{field}.skills[{index}]"
+            if not isinstance(entry, dict) or not _is_int(entry.get("level")) or entry["level"] < 2:
+                raise MapValidationError(source, f"{entry_field}.level", "مستوى صحيح 2 أو أكثر")
+            if entry.get("move") not in moves:
+                raise MapValidationError(source, f"{entry_field}.move", "حركة غير موجودة")
+            skills.append((entry["level"], entry["move"]))
         for slot in ("basic_move", "special_move"):
             if body.get(slot) not in moves:
                 raise MapValidationError(
@@ -226,6 +237,7 @@ def validate_animals(data: Any, moves: dict[str, Move], source: str) -> dict[str
             last_stand=last,
             catchable=catchable,
             reward_money=reward,
+            skills=tuple(skills),
         )
     return animals
 

@@ -21,6 +21,7 @@ ACTION_FLEE = "flee"
 ACTION_SWITCH = "switch"
 ACTION_CAPTURE = "capture"
 ACTION_ITEM = "item"
+ACTION_SKILL = "skill"
 
 KIND_ATTACK = "attack"
 KIND_COUNTER = "counter"
@@ -138,6 +139,10 @@ class BattleEngine:
             player_move = self._moves[self.player.template.basic_move]
         elif action == ACTION_SPECIAL:
             player_move = self._moves[self.player.template.special_move]
+        elif action == ACTION_SKILL:
+            if not isinstance(target, str) or target not in self.player.available_skill_moves():
+                raise ValueError("هذه المهارة غير مفتوحة لهذا الحيوان")
+            player_move = self._moves[target]
         else:
             raise ValueError(f"فعل غير معروف: {action}")
 

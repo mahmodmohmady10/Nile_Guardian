@@ -62,5 +62,127 @@
     "effect": {
       "type": "priority_next_turn"
     }
+  },
+  "hawk_strike": {
+    "name_ar": "هجمة الصقر",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.3
+    }
+  },
+  "leap": {
+    "name_ar": "وثبة",
+    "effect": {
+      "type": "priority_next_turn"
+    }
+  },
+  "swoop": {
+    "name_ar": "انقضاض حاد",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.7
+    }
+  },
+  "quick_hop": {
+    "name_ar": "قفزة سريعة",
+    "effect": {
+      "type": "priority_next_turn"
+    }
+  },
+  "charge": {
+    "name_ar": "اندفاعة قوية",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.3
+    }
+  },
+  "storm": {
+    "name_ar": "عاصفة",
+    "effect": {
+      "type": "heal_percent",
+      "percent": 10
+    }
+  },
+  "heavy_bite": {
+    "name_ar": "عضة ثقيلة",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.3
+    }
+  },
+  "relax": {
+    "name_ar": "استرخاء",
+    "effect": {
+      "type": "heal_percent",
+      "percent": 15
+    }
+  },
+  "jaw_strike": {
+    "name_ar": "ضربة الفك",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.7
+    }
+  },
+  "howl": {
+    "name_ar": "عواء",
+    "effect": {
+      "type": "priority_next_turn"
+    }
+  },
+  "fang_power": {
+    "name_ar": "عضة الافتراس القوية",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.4
+    }
+  },
+  "chase": {
+    "name_ar": "مطاردة",
+    "effect": {
+      "type": "heal_percent",
+      "percent": 15
+    }
+  },
+  "snatch": {
+    "name_ar": "خطف",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.3
+    }
+  },
+  "ambush_leap": {
+    "name_ar": "قفزة كمينية",
+    "effect": {
+      "type": "priority_next_turn"
+    }
+  },
+  "ambush": {
+    "name_ar": "كمين",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.6
+    }
+  },
+  "heavy_claw": {
+    "name_ar": "مخلب ثقيل",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.3
+    }
+  },
+  "double_roar": {
+    "name_ar": "زئير مضاعف",
+    "effect": {
+      "type": "heal_percent",
+      "percent": 20
+    }
+  },
+  "majesty": {
+    "name_ar": "هيبة",
+    "effect": {
+      "type": "extra_damage",
+      "multiplier": 1.5
+    }
   }
 }
