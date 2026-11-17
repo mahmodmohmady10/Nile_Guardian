@@ -84,13 +84,13 @@ class BattleScene(BaseScene):
         self._items: list[str] = []
         self._skills: list[str] = []
         self._lines: list[str] = []
+        self._note = ""
 
     def _entries(self) -> list[str]:
         entries = [ACTION_ATTACK, ACTION_SPECIAL]
         if self._engine.can_switch():
             entries.append(ACTION_SWITCH)
-        if self._engine.can_capture():
-            entries.append(ACTION_CAPTURE)
+        entries.append(ACTION_CAPTURE)
         if self._usable_items():
             entries.append(ACTION_ITEM)
         entries.append(ACTION_FLEE)
@@ -124,6 +124,8 @@ class BattleScene(BaseScene):
     def _handle_menu(self, action: str) -> None:
         entries = self._entries()
         self._index %= len(entries)
+        if action in ("up", "down"):
+            self._note = ""
         if action == "up":
             self._index = (self._index - 1) % len(entries)
         elif action == "down":
@@ -138,6 +140,8 @@ class BattleScene(BaseScene):
                 self._items = self._usable_items()
                 self._index = 0
                 self._phase = PHASE_ITEM
+            elif chosen == ACTION_CAPTURE and self._engine.capture_block_reason():
+                self._note = self._engine.capture_block_reason() or ""
             elif chosen == ACTION_SPECIAL:
                 self._skills = list(self._engine.player.available_skill_moves())
                 self._index = 0
@@ -224,6 +228,9 @@ class BattleScene(BaseScene):
         pygame.draw.rect(surface, ACCENT_COLOR, panel, width=2)
         if self._phase == PHASE_MENU:
             self._draw_options(surface, panel, [LABELS[a] for a in self._entries()])
+            if self._note:
+                note = self._renderer.render_line(self._note, 22, ACCENT_COLOR)
+                surface.blit(note, (panel.x + 40, panel.bottom - 34))
         elif self._phase == PHASE_SWITCH:
             self._draw_options(surface, panel, [self._member_label(i) for i in self._candidates])
         elif self._phase == PHASE_ITEM:

@@ -111,6 +111,16 @@ class BattleEngine:
             and self.enemy.current_hp * 100 <= self.enemy.max_hp * CAPTURE_THRESHOLD_PERCENT
         )
 
+    def capture_block_reason(self) -> str | None:
+        """سبب تعذر الاصطياد الآن، أو None إن كان متاحاً."""
+        if self.outcome is not None:
+            return "المعركة انتهت."
+        if not self.enemy.template.catchable:
+            return "هذا الحيوان لا يمكن اصطياده."
+        if self.enemy.is_fainted or not self.can_capture():
+            return "الاصطياد ممكن عندما تصل صحة الخصم إلى 10% أو أقل."
+        return None
+
     def needs_replacement(self) -> bool:
         return self.outcome == OUTCOME_CAPTURED and len(self.party) >= MAX_PARTY_SIZE
 

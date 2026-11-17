@@ -30,6 +30,7 @@ from src.scenes.confirm_scene import ConfirmScene
 from src.scenes.dialogue_scene import DialogueScene
 from src.scenes.hospital_scene import HospitalScene
 from src.scenes.menu_scene import MenuItems, MenuScene
+from src.scenes.party_scene import PartyScene
 from src.scenes.shop_scene import ShopScene
 from src.scenes.slot_scene import SlotScene
 from src.scenes.world_scene import WorldScene
@@ -187,6 +188,7 @@ def menu_items(session: Session) -> MenuItems:
     items.append(("لعبة جديدة", lambda: request_new_game(session)))
     if session.started:
         items.append(("حفظ", lambda: open_save(session)))
+    items.append(("الفريق", lambda: open_party(session)))
     items.append(("الحقيبة", lambda: open_bag(session)))
     items.append(("تحميل", lambda: open_load(session)))
     items.append(("خروج", lambda: session.stack.pop()))
@@ -195,6 +197,13 @@ def menu_items(session: Session) -> MenuItems:
 
 def make_menu(session: Session) -> MenuScene:
     return MenuScene(session.stack, session.renderer, lambda: menu_items(session))
+
+
+def open_party(session: Session) -> None:
+    move_names = {move_id: move.name_ar for move_id, move in session.catalog.moves.items()}
+    session.stack.push(
+        PartyScene(session.stack, session.renderer, session.state, move_names)
+    )
 
 
 def open_bag(session: Session) -> None:
