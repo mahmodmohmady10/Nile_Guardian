@@ -18,8 +18,6 @@ from src.engine.game import Game
 from src.engine.text_renderer import TextRenderer
 from src.logic.battle_engine import (
     OUTCOME_CAPTURED,
-    OUTCOME_ENEMY_FLED,
-    OUTCOME_LOST,
     OUTCOME_WON,
     BattleEngine,
 )
@@ -278,9 +276,8 @@ def open_battle(session: Session, enemy_id: str, on_end: Callable[[str], None]) 
     engine = BattleEngine(session.state.party, enemy, session.catalog.moves, session.rng)
 
     def finish(outcome: str) -> None:
-        if outcome == OUTCOME_LOST:
-            session.state.heal_party()
-        if outcome in (OUTCOME_WON, OUTCOME_ENEMY_FLED, OUTCOME_CAPTURED):
+        session.state.heal_party()
+        if outcome in (OUTCOME_WON, OUTCOME_CAPTURED):
             session.state.mark_defeated(enemy_id)
             session.state.add_money(enemy.template.reward_money)
             session.state.award_xp(xp_reward(enemy.template))

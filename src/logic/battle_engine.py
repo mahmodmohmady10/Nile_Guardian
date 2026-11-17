@@ -17,7 +17,6 @@ from src.logic.models import MAX_PARTY_SIZE, AnimalInstance, Move
 
 ACTION_ATTACK = "attack"
 ACTION_SPECIAL = "special"
-ACTION_FLEE = "flee"
 ACTION_SWITCH = "switch"
 ACTION_CAPTURE = "capture"
 ACTION_ITEM = "item"
@@ -29,8 +28,6 @@ KIND_NO_EFFECT = "no_effect"
 KIND_HEAL = "heal"
 KIND_LAST_STAND = "last_stand"
 KIND_FAINT = "faint"
-KIND_FLEE = "flee"
-KIND_ENEMY_FLED = "enemy_fled"
 KIND_SWITCH = "switch"
 KIND_AUTO_SWITCH = "auto_switch"
 KIND_CAPTURED = "captured"
@@ -41,13 +38,11 @@ KIND_ITEM_DEFENSE = "item_defense"
 
 OUTCOME_WON = "won"
 OUTCOME_LOST = "lost"
-OUTCOME_FLED = "fled"
-OUTCOME_ENEMY_FLED = "enemy_fled"
 OUTCOME_CAPTURED = "captured"
 
 ENEMY_SPECIAL_CHANCE = 0.3
 CAPTURE_THRESHOLD_PERCENT = 10
-CAPTURE_CHANCE = 0.5
+CAPTURE_CHANCE = 0.9  # نجاح الاصطياد عند 10% أو أقل من صحة الخصم
 EXTRA_EFFECT = "extra_damage"
 HEAL_EFFECT = "heal_percent"
 PRIORITY_EFFECT = "priority_next_turn"
@@ -136,9 +131,8 @@ class BattleEngine:
     def turn(self, action: str, target: int | str | None = None) -> list[BattleEvent]:
         if self.outcome is not None:
             raise RuntimeError("المعركة انتهت")
-        if action == ACTION_FLEE:
-            self.outcome = OUTCOME_FLED
-            return [BattleEvent(KIND_FLEE, self.player.name_ar, self.enemy.name_ar)]
+        if action == "flee":
+            raise ValueError("الانسحاب ألغي من اللعبة")
         if action == ACTION_SWITCH:
             return self._switch(target)
         if action == ACTION_CAPTURE:
@@ -170,10 +164,6 @@ class BattleEngine:
                 self.outcome = OUTCOME_WON
                 break
             if self._resolve_player_faint(events):
-                break
-            if self._enemy_fled():
-                self.outcome = OUTCOME_ENEMY_FLED
-                events.append(BattleEvent(KIND_ENEMY_FLED, self.enemy.name_ar, self.player.name_ar))
                 break
 
         acting_player.priority_next = (
@@ -330,8 +320,3 @@ class BattleEngine:
         self._resolve_player_faint(events)
         return events
 
-    def _enemy_fled(self) -> bool:
-        threshold = self.enemy.template.flee_at_percent
-        if threshold is None or self.enemy.is_fainted:
-            return False
-        return self.enemy.current_hp * 100 <= self.enemy.max_hp * threshold

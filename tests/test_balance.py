@@ -7,7 +7,6 @@ import random
 from src.logic.battle_engine import (
     ACTION_ATTACK,
     ACTION_SPECIAL,
-    OUTCOME_ENEMY_FLED,
     OUTCOME_WON,
     BattleEngine,
 )
@@ -33,7 +32,7 @@ def win_rate(enemy_id: str) -> float:
         while engine.outcome is None and turn < 300:
             engine.turn(ACTION_SPECIAL if turn % 3 == 2 else ACTION_ATTACK)
             turn += 1
-        wins += engine.outcome in (OUTCOME_WON, OUTCOME_ENEMY_FLED)
+        wins += engine.outcome == OUTCOME_WON
     return wins / SAMPLES * 100
 
 
@@ -43,7 +42,7 @@ def test_approved_card_values() -> None:
     timsah, asad = cat.animals["timsah_nile"], cat.animals["asad_dinder"]
     assert (saqr.max_hp, saqr.attack, saqr.defense) == (150, 52, 30)
     assert (ghazal.max_hp, ghazal.attack, ghazal.defense) == (100, 20, 30)
-    assert ghazal.flee_at_percent == 30
+    assert ghazal.flee_at_percent is None
     assert (timsah.max_hp, timsah.attack, timsah.defense) == (200, 50, 25)
     assert (asad.max_hp, asad.attack, asad.defense) == (200, 49, 30)
     assert asad.last_stand is not None and asad.last_stand.threshold_percent == 5
@@ -90,5 +89,5 @@ def test_upgraded_falcon_still_faces_a_challenge() -> None:
         while engine.outcome is None and turn < 300:
             engine.turn(ACTION_SPECIAL if turn % 3 == 2 else ACTION_ATTACK)
             turn += 1
-        wins += engine.outcome in (OUTCOME_WON, OUTCOME_ENEMY_FLED)
+        wins += engine.outcome == OUTCOME_WON
     assert wins / SAMPLES * 100 >= 80

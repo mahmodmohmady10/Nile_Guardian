@@ -8,9 +8,7 @@ from src.logic.battle_engine import (
     KIND_CAPTURE_FAILED,
     KIND_CAPTURED,
     KIND_COUNTER,
-    KIND_ENEMY_FLED,
     KIND_FAINT,
-    KIND_FLEE,
     KIND_HEAL,
     KIND_ITEM_DEFENSE,
     KIND_ITEM_HEAL,
@@ -28,10 +26,6 @@ def _display(value: int) -> str:
 
 def describe_event(event: BattleEvent) -> str:
     kind = event.kind
-    if kind == KIND_FLEE:
-        return f"{event.actor_name} انسحب من المعركة."
-    if kind == KIND_ENEMY_FLED:
-        return f"{event.actor_name} انسحب من المعركة، وفزت بها!"
     if kind == KIND_FAINT:
         return f"{event.target_name} تراجع عن المعركة."
     if kind == KIND_NO_EFFECT:

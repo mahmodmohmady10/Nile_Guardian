@@ -6,16 +6,12 @@ import pytest
 from src.core.game_state import GameState
 from src.logic.battle_engine import (
     ACTION_ATTACK,
-    ACTION_FLEE,
     ACTION_SPECIAL,
     KIND_ATTACK,
     KIND_COUNTER,
-    KIND_ENEMY_FLED,
     KIND_FAINT,
     KIND_HEAL,
     KIND_LAST_STAND,
-    OUTCOME_ENEMY_FLED,
-    OUTCOME_FLED,
     OUTCOME_LOST,
     OUTCOME_WON,
     BattleEngine,
@@ -171,12 +167,6 @@ def test_losing_lead_animal_loses() -> None:
     assert engine.outcome == OUTCOME_LOST and player.is_fainted
 
 
-def test_enemy_flees_at_threshold_and_player_wins() -> None:
-    engine, _, _ = fight(template(speed=14), template(speed=6, flee=30, hp=100), enemy_hp=40)
-    events = engine.turn(ACTION_ATTACK)
-    assert engine.outcome == OUTCOME_ENEMY_FLED
-    assert events[-1].kind == KIND_ENEMY_FLED
-
 
 def test_last_stand_restores_quarter_once() -> None:
     rule = LastStand(threshold_percent=5, bonus_percent=25)
@@ -217,15 +207,10 @@ def test_counter_event_when_attack_below_defense() -> None:
     assert counter and counter[0].amount == 10 and player.current_hp == 140
 
 
-def test_flee_action_ends_with_single_event() -> None:
-    engine, _, _ = fight(template(), template())
-    events = engine.turn(ACTION_FLEE)
-    assert engine.outcome == OUTCOME_FLED and len(events) == 1
-
 
 def test_no_turn_after_battle_ended() -> None:
-    engine, _, _ = fight(template(), template())
-    engine.turn(ACTION_FLEE)
+    engine, _, _ = fight(template(), template(), enemy_hp=1)
+    engine.turn(ACTION_ATTACK)
     with pytest.raises(RuntimeError):
         engine.turn(ACTION_ATTACK)
 
@@ -249,9 +234,6 @@ def test_critical_text_shows_display_units() -> None:
     text = describe_event(BattleEvent(KIND_ATTACK, "صقر", "تمساح", "نقرة", 150, True))
     assert "ضربة حرجة" in text and "15" in text
 
-
-def test_enemy_flee_text() -> None:
-    assert "انسحب" in describe_event(BattleEvent(KIND_ENEMY_FLED, "غزال", "صقر"))
 
 
 def test_faint_text_names_target() -> None:

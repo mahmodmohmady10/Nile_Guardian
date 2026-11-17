@@ -138,7 +138,7 @@ def test_wild_battle_always_terminates(seed: int) -> None:
         if engine.outcome is not None:
             break
         engine.turn(ACTION_SPECIAL if turn % 2 else ACTION_ATTACK)
-    assert engine.outcome in {"won", "lost", "fled", "enemy_fled"}
+    assert engine.outcome in {"won", "lost"}
     assert lead.current_hp >= 0 and enemy.current_hp >= 0
 
 

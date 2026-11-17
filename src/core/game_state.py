@@ -40,6 +40,12 @@ class GameState:
     def lead(self) -> AnimalInstance | None:
         return self.party[0] if self.party else None
 
+    def set_lead(self, index: int) -> None:
+        """ينقل الحيوان المختار إلى المقدمة، فيكون هو الذي يقاتل أولاً."""
+        if not 0 <= index < len(self.party):
+            raise ValueError("اختيار غير صالح")
+        self.party.insert(0, self.party.pop(index))
+
     def heal_party(self) -> None:
         for animal in self.party:
             animal.heal_full()

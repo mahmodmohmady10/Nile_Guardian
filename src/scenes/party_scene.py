@@ -28,10 +28,16 @@ class PartyScene(BaseScene):
         self._move_names = dict(move_names)
         self._index = 0
         self._viewing = False
+        self._message = ""
 
     def handle_action(self, action: str) -> None:
         if self._viewing:
-            if action in ("cancel", "confirm"):
+            if action == "cancel":
+                self._viewing = False
+            elif action == "confirm":
+                self._state.set_lead(self._index)
+                self._index = 0
+                self._message = f"{self._state.party[0].name_ar} هو قائد الفريق الآن."
                 self._viewing = False
             return
         size = len(self._state.party)
@@ -61,8 +67,11 @@ class PartyScene(BaseScene):
             selected = row == self._index
             color = ACCENT_COLOR if selected else TEXT_COLOR
             marker = "> " if selected else "  "
-            label = f"{marker}{animal.name_ar} — المستوى {animal.level}"
+            lead_tag = " (القائد)" if row == 0 else ""
+            label = f"{marker}{animal.name_ar} — المستوى {animal.level}{lead_tag}"
             surface.blit(self._renderer.render_line(label, 30, color), (80, 170 + row * 56))
+        if self._message:
+            surface.blit(self._renderer.render_line(self._message, 26, TEXT_COLOR), (80, 480))
         self.draw_text(surface, "ENTER: card     ESC: back", (80, 520), ACCENT_COLOR, 22)
 
     def _draw_card(self, surface: pygame.Surface, animal) -> None:  # type: ignore[no-untyped-def]
@@ -90,4 +99,5 @@ class PartyScene(BaseScene):
             surface.blit(self._renderer.render_line(f"• {skill.name_ar} — {status}", 24, color),
                          (100, y))
             y += 32
-        self.draw_text(surface, "ESC: back", (80, 540), ACCENT_COLOR, 22)
+        hint = "ENTER: اجعله القائد     ESC: back"
+        self.draw_text(surface, hint, (80, 540), ACCENT_COLOR, 22)

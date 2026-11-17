@@ -11,14 +11,11 @@ from src.engine.text_renderer import TextRenderer
 from src.logic.battle_engine import (
     ACTION_ATTACK,
     ACTION_CAPTURE,
-    ACTION_FLEE,
     ACTION_ITEM,
     ACTION_SKILL,
     ACTION_SPECIAL,
     ACTION_SWITCH,
     OUTCOME_CAPTURED,
-    OUTCOME_ENEMY_FLED,
-    OUTCOME_FLED,
     OUTCOME_LOST,
     OUTCOME_WON,
     BattleEngine,
@@ -33,16 +30,19 @@ LABELS = {
     ACTION_SWITCH: "تبديل",
     ACTION_CAPTURE: "اصطياد",
     ACTION_ITEM: "عنصر",
-    ACTION_FLEE: "انسحاب",
 }
 END_TEXT = {
     OUTCOME_WON: "انتصر الأمين!",
     OUTCOME_LOST: "سقط الفريق، وعاد الأمين إلى القرية.",
-    OUTCOME_FLED: "انسحب الأمين من المعركة.",
-    OUTCOME_ENEMY_FLED: "انسحب الخصم، وفزت بالمعركة!",
     OUTCOME_CAPTURED: "انضم الحيوان إلى فريقك!",
 }
 USABLE_ITEMS = ("heal", "power", "defense")
+RESULT_FRAMES = 30
+RESULT_STYLE = {
+    OUTCOME_WON: ("انتصر الأمين!", (255, 215, 0)),
+    OUTCOME_LOST: ("سقط الفريق", (230, 70, 70)),
+    OUTCOME_CAPTURED: ("اصطدت الحيوان!", (190, 120, 255)),
+}
 PHASE_MENU = "menu"
 PHASE_SWITCH = "switch"
 PHASE_ITEM = "item"
@@ -85,6 +85,7 @@ class BattleScene(BaseScene):
         self._skills: list[str] = []
         self._lines: list[str] = []
         self._note = ""
+        self._frames = 0
 
     def _entries(self) -> list[str]:
         entries = [ACTION_ATTACK, ACTION_SPECIAL]
@@ -93,7 +94,6 @@ class BattleScene(BaseScene):
         entries.append(ACTION_CAPTURE)
         if self._usable_items():
             entries.append(ACTION_ITEM)
-        entries.append(ACTION_FLEE)
         return entries
 
     def _usable_items(self) -> list[str]:
@@ -120,6 +120,10 @@ class BattleScene(BaseScene):
             outcome = self._engine.outcome
             if outcome is not None:
                 self._on_finish(outcome)
+
+    def _enter_end(self) -> None:
+        self._phase = PHASE_END
+        self._frames = 0
 
     def _handle_menu(self, action: str) -> None:
         entries = self._entries()
@@ -201,7 +205,7 @@ class BattleScene(BaseScene):
             self._index = (self._index + 1) % size
         elif action == "confirm":
             self._engine.replace_member(self._index)
-            self._phase = PHASE_END
+            self._enter_end()
 
     def _play(self, action: str, target: int | str | None = None) -> None:
         events = self._engine.turn(action, target)
@@ -217,7 +221,7 @@ class BattleScene(BaseScene):
             self._index = 0
             self._phase = PHASE_REPLACE
         else:
-            self._phase = PHASE_END
+            self._enter_end()
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(BG_COLOR)
@@ -244,6 +248,25 @@ class BattleScene(BaseScene):
             self._draw_options(surface, panel, rows)
         else:
             self._draw_log(surface, panel)
+        if self._phase == PHASE_END and self._engine.outcome in RESULT_STYLE:
+            self._draw_result(surface, self._engine.outcome)
+
+    def _draw_result(self, surface: pygame.Surface, outcome: str) -> None:
+        self._frames = min(self._frames + 1, RESULT_FRAMES)
+        progress = self._frames / RESULT_FRAMES
+        veil = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        veil.fill((0, 0, 0, int(170 * progress)))
+        surface.blit(veil, (0, 0))
+        text, color = RESULT_STYLE[outcome]
+        rendered = self._renderer.render_line(text, 72, color)
+        rendered.set_alpha(int(255 * progress))
+        x = surface.get_width() // 2 - rendered.get_width() // 2
+        slide = int((1 - progress) * 40)
+        y = surface.get_height() // 2 - rendered.get_height() // 2 - slide
+        surface.blit(rendered, (x, y))
+        if self._frames >= RESULT_FRAMES:
+            hint = self._renderer.render_line("ENTER", 26, TEXT_COLOR)
+            surface.blit(hint, (surface.get_width() // 2 - hint.get_width() // 2, y + 110))
 
     def _member_label(self, index: int) -> str:
         animal = self._engine.party[index]
@@ -284,9 +307,10 @@ class BattleScene(BaseScene):
         pygame.draw.rect(surface, BAR_BG_COLOR, (x, y + 42, BAR_WIDTH, 16))
         ratio = max(0.0, animal.current_hp / animal.max_hp)
         pygame.draw.rect(surface, color, (x, y + 42, int(BAR_WIDTH * ratio), 16))
+        percent = max(0, round(animal.current_hp * 100 / animal.max_hp))
         self.draw_text(
             surface,
-            f"HP {_display(max(0, animal.current_hp))}/{_display(animal.max_hp)}",
+            f"HP {_display(max(0, animal.current_hp))}/{_display(animal.max_hp)} ({percent}%)",
             (x, y + 64),
             TEXT_COLOR,
             22,

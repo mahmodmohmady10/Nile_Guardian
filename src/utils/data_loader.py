@@ -183,8 +183,10 @@ def validate_animals(data: Any, moves: dict[str, Move], source: str) -> dict[str
         if not _is_number(vmax) or not vmin <= vmax <= 1:
             raise MapValidationError(source, f"{field}.variance_max", "يجب أن يكون بين min و1")
         flee = body.get("flee_at_percent")
-        if flee is not None and (not _is_int(flee) or not 1 <= flee <= 99):
-            raise MapValidationError(source, f"{field}.flee_at_percent", "نسبة بين 1 و99 أو null")
+        if flee is not None:
+            raise MapValidationError(
+                source, f"{field}.flee_at_percent", "الانسحاب ألغي، يجب أن تكون القيمة null"
+            )
         last_raw = body.get("last_stand")
         last: LastStand | None = None
         if last_raw is not None:
