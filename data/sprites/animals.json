@@ -1,0 +1,319 @@
+{
+  "saqr_jedi": {
+    "palette": {
+      "K": [
+        28,
+        18,
+        8
+      ],
+      "B": [
+        150,
+        92,
+        44
+      ],
+      "L": [
+        196,
+        140,
+        78
+      ],
+      "D": [
+        84,
+        50,
+        22
+      ],
+      "W": [
+        236,
+        224,
+        190
+      ],
+      "Y": [
+        244,
+        190,
+        44
+      ],
+      "E": [
+        255,
+        255,
+        255
+      ]
+    },
+    "rows": [
+      "................",
+      "..........KKK...",
+      ".........KLLLK..",
+      "........KLLBBK..",
+      "......KKLBBBBBK.",
+      ".....KLBBBBBBBK.",
+      "....KLBBBBWWBBK.",
+      "...KDDBBBBWWBBK.",
+      "..KDDDDBBBBBBBK.",
+      ".KDDDDDDBBBBBBK.",
+      ".KDDDDDDDDBBBK..",
+      "KDDDDDDDDDBBK...",
+      ".KDDDDDDDDDK....",
+      "..KKDDDDDDK.....",
+      "....KKYYYK......",
+      "......KYK......."
+    ]
+  },
+  "ghazal_reem": {
+    "palette": {
+      "K": [
+        30,
+        20,
+        10
+      ],
+      "T": [
+        204,
+        150,
+        88
+      ],
+      "L": [
+        236,
+        196,
+        140
+      ],
+      "D": [
+        120,
+        78,
+        44
+      ],
+      "W": [
+        248,
+        240,
+        224
+      ],
+      "N": [
+        70,
+        50,
+        30
+      ]
+    },
+    "rows": [
+      "..N.......N.....",
+      ".NN.......NN....",
+      ".NKK.....KKN....",
+      "..KKKKKKKKK.....",
+      "...KTLLLTK......",
+      "..KTLLLLLTK.....",
+      "..KTTTTTTTK.....",
+      "...KTWWWWTKK....",
+      "....KTWWWTTK....",
+      "....KTTTTTTK....",
+      "...KTTTTTTTK....",
+      "..KTT.KKKTT.....",
+      "..KTK..KTK......",
+      "..KDK..KDK......",
+      "..KKK..KKK......",
+      "................"
+    ]
+  },
+  "timsah_nile": {
+    "palette": {
+      "K": [
+        18,
+        30,
+        18
+      ],
+      "G": [
+        72,
+        120,
+        60
+      ],
+      "L": [
+        140,
+        184,
+        108
+      ],
+      "D": [
+        40,
+        70,
+        36
+      ],
+      "W": [
+        240,
+        236,
+        210
+      ],
+      "R": [
+        200,
+        70,
+        60
+      ]
+    },
+    "rows": [
+      "................",
+      "................",
+      "KKKKKKKKKKKKK...",
+      "KGLLLLLLLLGGKK..",
+      "KGLWLLLLLLGGGKK.",
+      "KGGGGGGGGGGGGGKK",
+      "KGGGGGGGGGGGGGGK",
+      "KDDDDDDDDDDDDDGK",
+      "KKKKKKKKKKKKKKKK",
+      ".KGKGKGKGKGKGK..",
+      "..KKKKKKKKKKK...",
+      "....RR..RR......",
+      "................",
+      "................",
+      "................",
+      "................"
+    ]
+  },
+  "wolf": {
+    "palette": {
+      "K": [
+        24,
+        24,
+        30
+      ],
+      "G": [
+        120,
+        120,
+        130
+      ],
+      "L": [
+        196,
+        196,
+        206
+      ],
+      "D": [
+        70,
+        70,
+        78
+      ],
+      "E": [
+        240,
+        180,
+        40
+      ],
+      "W": [
+        240,
+        240,
+        244
+      ]
+    },
+    "rows": [
+      "K.........K.....",
+      "KK.......KK.....",
+      "KGK.....KGK.....",
+      "KGGKKKKKGGK.....",
+      ".KGGGGGGGGK.....",
+      "KKGLLLLLLGK.....",
+      "KGGGLLLLLGK.....",
+      "KGWEGGGGEGK.....",
+      ".KGGGGGGGGKK....",
+      ".KGGGLLLLGGGK...",
+      "..KGGGGGGGGGGK..",
+      "...KDDGGGGGDDK..",
+      "....KDDDDDDDK...",
+      ".....KKKKKKK....",
+      "................",
+      "................"
+    ]
+  },
+  "leopard": {
+    "palette": {
+      "K": [
+        30,
+        20,
+        10
+      ],
+      "Y": [
+        236,
+        184,
+        76
+      ],
+      "L": [
+        250,
+        214,
+        120
+      ],
+      "S": [
+        120,
+        80,
+        30
+      ],
+      "W": [
+        248,
+        240,
+        214
+      ]
+    },
+    "rows": [
+      "...KK...........",
+      "..KYYK..........",
+      "..KYLYKKKK......",
+      ".KYLYYYYYYK.....",
+      ".KYSYYYSYYKK....",
+      "KYYYYYYYYYYYK...",
+      "KYLYYYSYYYYYK...",
+      "KYYYYYYYYSYYK...",
+      ".KYYSYYYYYYYKK..",
+      "..KYYYSYYYYYYK..",
+      "..KYYYYYYYSYYK..",
+      "...KYYYYYYYYYK..",
+      "...KYS.KYYYYK...",
+      "...KYK..KYYK....",
+      "...KKK...KKK....",
+      "................"
+    ]
+  },
+  "asad_dinder": {
+    "palette": {
+      "K": [
+        40,
+        24,
+        10
+      ],
+      "M": [
+        204,
+        150,
+        64
+      ],
+      "L": [
+        236,
+        196,
+        120
+      ],
+      "N": [
+        124,
+        72,
+        30
+      ],
+      "D": [
+        90,
+        50,
+        20
+      ],
+      "Y": [
+        238,
+        200,
+        120
+      ],
+      "B": [
+        60,
+        40,
+        20
+      ]
+    },
+    "rows": [
+      "...KKKKKKKKKK...",
+      "..KNNNNNNNNNK...",
+      ".KNMMMMMMMMMNK..",
+      ".KNMLLLLLLLMNK..",
+      "KNMLLLLLLLLLMNK.",
+      "KNMLLLLLLLLLMNK.",
+      "KNMLYYYYYYLMNK..",
+      "KNMLYYYYYYYLNK..",
+      "KNMLYBYYYYBLNK..",
+      ".KNMLYYYYYYLNK..",
+      ".KNMMLYYYYLMNK..",
+      "..KNMMLYYLMNK...",
+      "...KNMMMMMNK....",
+      "...KKKKKKKKK....",
+      "................",
+      "................"
+    ]
+  }
+}

@@ -39,6 +39,11 @@ class TextRenderer:
             self._fonts[size] = (arabic, latin)
         return self._fonts[size]
 
+    def line_height(self, size: int) -> int:
+        """ارتفاع السطر الفعلي للخط بهذا الحجم، ليُبنى عليه التباعد."""
+        arabic, latin = self._fonts_for(size)
+        return max(arabic.get_linesize(), latin.get_linesize())
+
     def width(self, text: str, size: int) -> int:
         arabic, latin = self._fonts_for(size)
         return sum(

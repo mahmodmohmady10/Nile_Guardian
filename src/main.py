@@ -53,6 +53,7 @@ from src.utils.data_loader import (
     load_objectives_file,
 )
 from src.utils.paths import resource_path
+from src.utils.sprites import check_sprites_cover, load_sprites_file
 from src.utils.saves import AUTOSAVE_ID, SLOT_IDS, default_saves_dir, read_save, write_save
 from src.world.objectives import GuideData
 
@@ -65,6 +66,8 @@ MOVES = ("data", "moves.json")
 OBJECTIVES = ("data", "objectives.json")
 ITEMS = ("data", "items.json")
 ITEMS_NAME = "items.json"
+SPRITES = ("data", "sprites", "animals.json")
+SPRITES_NAME = "sprites/animals.json"
 NEW_GAME_NAME = "new_game.json"
 OBJECTIVES_NAME = "objectives.json"
 VILLAGE_NAME = "village_01.json"
@@ -81,6 +84,7 @@ class Session:
     rng: random.Random
     guide: GuideData
     new_game: NewGameSpec
+    sprites: dict
     items: dict[str, Item]
     saves_dir: Path
     started: bool = False
@@ -297,12 +301,19 @@ def open_battle(session: Session, enemy_id: str, on_end: Callable[[str], None]) 
             move_names={
                 move_id: move.name_ar for move_id, move in session.catalog.moves.items()
             },
+            sprites=session.sprites,
         )
     )
 
 
 def load_everything() -> tuple[
-    dict[str, MapSpec], dict[str, Dialogue], Catalog, NewGameSpec, GuideData, dict[str, Item]
+    dict[str, MapSpec],
+    dict[str, Dialogue],
+    Catalog,
+    NewGameSpec,
+    GuideData,
+    dict[str, Item],
+    dict,
 ]:
     maps = {
         map_id: load_map_file(resource_path("data", "maps", filename))
@@ -323,12 +334,14 @@ def load_everything() -> tuple[
     objectives = load_objectives_file(resource_path(*OBJECTIVES))
     check_objectives(objectives, maps, catalog, OBJECTIVES_NAME)
     items = load_items_file(resource_path(*ITEMS))
-    return maps, dialogues, catalog, new_game, build_guide(maps, objectives), items
+    sprites = load_sprites_file(resource_path(*SPRITES))
+    check_sprites_cover({animal_id for animal_id in catalog.animals}, sprites, SPRITES_NAME)
+    return maps, dialogues, catalog, new_game, build_guide(maps, objectives), items, sprites
 
 
 def main() -> int:
     try:
-        maps, dialogues, catalog, new_game, guide, items = load_everything()
+        maps, dialogues, catalog, new_game, guide, items, sprites = load_everything()
     except MapValidationError as exc:
         print(f"خطأ في بيانات اللعبة: {exc}", file=sys.stderr)
         return 1
@@ -354,6 +367,7 @@ def main() -> int:
             guide=guide,
             new_game=new_game,
             items=items,
+            sprites=sprites,
             saves_dir=default_saves_dir(),
         )
         stack.push(make_menu(session))
