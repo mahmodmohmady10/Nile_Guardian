@@ -1,0 +1,114 @@
+[
+  {
+    "source": "Secretary_Bird.jpg",
+    "output": "animals/saqr_jedi.png",
+    "cut_out": true,
+    "size": 128
+  },
+  {
+    "source": "tiger.jpg",
+    "output": "animals/leopard.png",
+    "cut_out": true,
+    "size": 128
+  },
+  {
+    "source": "gzal.jpg",
+    "output": "animals/ghazal_reem.png",
+    "cut_out": true,
+    "size": 128
+  },
+  {
+    "source": "crocodail.jpg",
+    "output": "animals/timsah_nile.png",
+    "cut_out": true,
+    "size": 128
+  },
+  {
+    "source": "lion.jpg",
+    "output": "animals/asad_dinder.png",
+    "cut_out": true,
+    "size": 128
+  },
+  {
+    "source": "wolf.jpg",
+    "output": "animals/wolf.png",
+    "cut_out": true,
+    "size": 128
+  },
+  {
+    "source": "al_taieb.jpg",
+    "output": "characters/amin/face.png",
+    "cut_out": true,
+    "size": 256
+  },
+  {
+    "source": "al_taiebs.jpg",
+    "output": "characters/taieb/face.png",
+    "cut_out": true,
+    "size": 256
+  },
+  {
+    "source": "hosbital.jpg",
+    "output": "buildings/hospital.png",
+    "cut_out": true,
+    "size": 256
+  },
+  {
+    "source": "market.jpg",
+    "output": "buildings/market.png",
+    "cut_out": true,
+    "size": 256
+  },
+  {
+    "source": "green_earth.jpg",
+    "output": "tiles/grass.png",
+    "cut_out": false,
+    "size": 32,
+    "crop_fraction": 0.3
+  },
+  {
+    "source": "road.jpg",
+    "output": "tiles/road.png",
+    "cut_out": false,
+    "size": 32,
+    "crop_square": true,
+    "rotate": 90
+  },
+  {
+    "source": "bohira.jpg",
+    "output": "tiles/lake.png",
+    "cut_out": false,
+    "size": 32,
+    "crop_fraction": 0.5
+  },
+  {
+    "source": "plame.jpg",
+    "output": "tiles/overlays/palm.png",
+    "cut_out": true,
+    "size": 64
+  },
+  {
+    "source": "big_rock.jpg",
+    "output": "tiles/overlays/rock_big.png",
+    "cut_out": true,
+    "size": 64
+  },
+  {
+    "source": "small_rock.jpg",
+    "output": "tiles/overlays/rock_small.png",
+    "cut_out": true,
+    "size": 48
+  },
+  {
+    "source": "icon.jpg",
+    "output": "icon/game_icon.png",
+    "cut_out": false,
+    "size": 64
+  },
+  {
+    "source": "icon.jpg",
+    "output": "maps/dinder_reserve_card.png",
+    "cut_out": false,
+    "size": 256
+  }
+]

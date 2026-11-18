@@ -22,6 +22,7 @@ from src.engine.text_renderer import TextRenderer
 from src.logic.battle_engine import OUTCOME_LOST
 from src.scenes.base_scene import BaseScene
 from src.utils.data_loader import MapSpec, NpcSpec
+from src.utils.paths import resource_path
 from src.world.encounters import EncounterZone, roll_encounter
 from src.world.objectives import (
     GuideData,
@@ -39,6 +40,11 @@ ARROW_DISTANCE = 56.0
 ARROW_LENGTH = 18.0
 ARROW_HALF_WIDTH = 9.0
 HUD_POSITION = (10, 40)
+
+
+ENCOUNTER_COOLDOWN_STEPS = 4
+OVERLAY_SIZES = {"tiles/overlays/palm.png": 40, "tiles/overlays/rock_big.png": 36,
+                 "tiles/overlays/rock_small.png": 22}
 
 
 class WorldScene(BaseScene):
@@ -70,6 +76,7 @@ class WorldScene(BaseScene):
         self._runner = EventRunner()
         self._waiting_for_dialogue = False
         self._map_surface: pygame.Surface | None = None
+        self._images: dict[object, pygame.Surface | None] = {}
         self._apply(state.map_id, load_map(state.map_id))
         self._player = PlayerController(state.grid_x, state.grid_y, MOVE_SECONDS_PER_TILE)
 
@@ -78,9 +85,11 @@ class WorldScene(BaseScene):
         self._map = TileMap(spec.width, spec.height, spec.rows, spec.legend)
         self._events = spec.events
         self._zones: tuple[EncounterZone, ...] = spec.encounter_zones
+        self._encounter_cooldown = 0
         self._spawn = spec.spawn
         self._npcs = spec.npcs
         self._npc_at: dict[tuple[int, int], NpcSpec] = {(n.x, n.y): n for n in spec.npcs}
+        self._objects = spec.objects
         self._map_surface = None
 
     def on_enter(self) -> None:
@@ -156,11 +165,15 @@ class WorldScene(BaseScene):
     def _maybe_encounter(self, x: int, y: int) -> None:
         if self._state.lead() is None:
             return
-        enemy_id = roll_encounter(self._zones, x, y, self._rng)
+        if self._encounter_cooldown > 0:
+            self._encounter_cooldown -= 1
+            return
+        enemy_id = roll_encounter(self._zones, x, y, self._rng, frozenset(self._state.defeated))
         if enemy_id is not None:
             self._open_battle(enemy_id, self._battle_ended)
 
     def _battle_ended(self, outcome: str) -> None:
+        self._encounter_cooldown = ENCOUNTER_COOLDOWN_STEPS
         if outcome == OUTCOME_LOST:
             spawn_x, spawn_y = self._spawn
             self._player = PlayerController(spawn_x, spawn_y, MOVE_SECONDS_PER_TILE)
@@ -226,11 +239,61 @@ class WorldScene(BaseScene):
     def _can_enter(self, x: int, y: int) -> bool:
         return not self._map.is_solid(x, y) and (x, y) not in self._npc_at
 
+    def _raw_image(self, relative: str) -> pygame.Surface | None:
+        key = ("raw", relative)
+        if key not in self._images:
+            path = resource_path("data", "images", *relative.split("/"))
+            self._images[key] = pygame.image.load(str(path)) if path.is_file() else None
+        return self._images[key]
+
+    def _image(self, relative: str, size: tuple[int, int]) -> pygame.Surface | None:
+        key = (relative, size)
+        if key not in self._images:
+            raw = self._raw_image(relative)
+            if raw is None:
+                self._images[key] = None
+            elif raw.get_size() == size:
+                self._images[key] = raw
+            else:
+                self._images[key] = pygame.transform.smoothscale(raw, size)
+        return self._images[key]
+
+    def _fit_image(self, relative: str, box_w: int, box_h: int) -> pygame.Surface | None:
+        raw = self._raw_image(relative)
+        if raw is None:
+            return None
+        width, height = raw.get_size()
+        scale = min(box_w / width, box_h / height)
+        size = (max(1, round(width * scale)), max(1, round(height * scale)))
+        key = ("fit", relative, size)
+        if key not in self._images:
+            self._images[key] = pygame.transform.smoothscale(raw, size)
+        return self._images[key]
+
     def _build_map_surface(self) -> pygame.Surface:
         surface = pygame.Surface((self._map.width * TILE_SIZE, self._map.height * TILE_SIZE))
         for y in range(self._map.height):
             for x in range(self._map.width):
-                color = self._map.tile_at(x, y).color
-                rect = (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                pygame.draw.rect(surface, color, rect)
+                tile = self._map.tile_at(x, y)
+                left, top = x * TILE_SIZE, y * TILE_SIZE
+                base = self._image(tile.image, (TILE_SIZE, TILE_SIZE)) if tile.image else None
+                if base is not None:
+                    surface.blit(base, (left, top))
+                else:
+                    pygame.draw.rect(surface, tile.color, (left, top, TILE_SIZE, TILE_SIZE))
+                if tile.overlay:
+                    side = tile.overlay_size or OVERLAY_SIZES.get(tile.overlay, 36)
+                    overlay = self._image(tile.overlay, (side, side))
+                    if overlay is not None:
+                        surface.blit(overlay, (left + (TILE_SIZE - side) // 2,
+                                               top + TILE_SIZE - side - 2))
+        for obj in self._objects:
+            box_w = int(obj.width * TILE_SIZE * obj.scale)
+            box_h = int(obj.height * TILE_SIZE * 1.6 * obj.scale)
+            image = self._fit_image(obj.image, box_w, box_h)
+            if image is not None:
+                image_w, image_h = image.get_size()
+                bottom = (obj.y + obj.height) * TILE_SIZE
+                left = obj.x * TILE_SIZE + (obj.width * TILE_SIZE - image_w) // 2
+                surface.blit(image, (left, bottom - image_h))
         return surface

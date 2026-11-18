@@ -51,6 +51,17 @@ class Dialogue:
     id: str
     speaker: str
     lines: tuple[str, ...]
+    portrait: str | None = None
+
+
+@dataclass(frozen=True)
+class MapObject:
+    image: str
+    x: int
+    y: int
+    width: int
+    height: int
+    scale: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -73,6 +84,7 @@ class MapSpec:
     npcs: list[NpcSpec]
     events: tuple[EventSpec, ...]
     encounter_zones: tuple[EncounterZone, ...]
+    objects: tuple[MapObject, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -274,7 +286,31 @@ def validate_map(data: Any, source: str) -> MapSpec:
                 source, f"events[{index}].trigger.npc_id", "لا توجد شخصية بهذا المعرّف"
             )
     zones = _parse_zones(data.get("encounter_zones", []), width, height, source)
-    return MapSpec(width, height, legend, rows, spawn, npcs, events, zones)
+    objects = _parse_objects(data.get("objects", []), width, height, source)
+    return MapSpec(width, height, legend, rows, spawn, npcs, events, zones, objects)
+
+
+def _parse_objects(value: Any, width: int, height: int, source: str) -> tuple[MapObject, ...]:
+    if not isinstance(value, list):
+        raise MapValidationError(source, "objects", "يجب أن تكون قائمة")
+    objects: list[MapObject] = []
+    for index, entry in enumerate(value):
+        field = f"objects[{index}]"
+        if not isinstance(entry, dict):
+            raise MapValidationError(source, field, "يجب أن يكون كائناً")
+        image = entry.get("image")
+        if not _is_text(image):
+            raise MapValidationError(source, f"{field}.image", "مسار الصورة مطلوب")
+        x, y, w, h = entry.get("x"), entry.get("y"), entry.get("width"), entry.get("height")
+        if not all(_is_int(v) for v in (x, y, w, h)) or w <= 0 or h <= 0:
+            raise MapValidationError(source, field, "x و y و width و height أعداد صحيحة")
+        if x < 0 or y < 0 or x + w > width or y + h > height:
+            raise MapValidationError(source, field, "الكائن خارج حدود الخريطة")
+        scale = entry.get("scale", 1.0)
+        if not isinstance(scale, (int, float)) or isinstance(scale, bool) or scale <= 0:
+            raise MapValidationError(source, f"{field}.scale", "عدد موجب")
+        objects.append(MapObject(image, x, y, w, h, float(scale)))
+    return tuple(objects)
 
 
 def _positive_int(data: dict[str, Any], field: str, source: str) -> int:
@@ -305,7 +341,20 @@ def _parse_legend(value: Any, source: str) -> dict[str, TileType]:
             or not all(_is_int(c) and 0 <= c <= 255 for c in color)
         ):
             raise MapValidationError(source, f"{field}.color", "[R, G, B] بقيم 0 إلى 255")
-        legend[symbol] = TileType(name=name, solid=solid, color=(color[0], color[1], color[2]))
+        image = spec.get("image")
+        if image is not None and not _is_text(image):
+            raise MapValidationError(source, f"{field}.image", "مسار الصورة نصّي")
+        overlay_size = spec.get("overlay_size")
+        if overlay_size is not None and (not _is_int(overlay_size) or overlay_size <= 0):
+            raise MapValidationError(source, f"{field}.overlay_size", "حجم بالبكسل موجب")
+        overlay = spec.get("overlay")
+        if overlay is not None and not _is_text(overlay):
+            raise MapValidationError(source, f"{field}.overlay", "مسار الصورة نصّي")
+        legend[symbol] = TileType(
+            overlay=overlay,
+            overlay_size=overlay_size,
+            name=name, solid=solid, color=(color[0], color[1], color[2]), image=image
+        )
     return legend
 
 
@@ -374,7 +423,10 @@ def _parse_zones(value: Any, width: int, height: int, source: str) -> tuple[Enco
             weight = entry.get("weight")
             if not _is_int(weight) or weight <= 0:
                 raise MapValidationError(source, f"{entry_field}.weight", "وزن موجب صحيح")
-            table.append(EncounterEntry(entry["animal_id"], weight))
+            requires = entry.get("requires")
+            if requires is not None and not _is_text(requires):
+                raise MapValidationError(source, f"{entry_field}.requires", "معرّف حيوان نصّي")
+            table.append(EncounterEntry(entry["animal_id"], weight, requires))
         zones.append(EncounterZone(zone_id, x, y, zone_w, zone_h, rate, tuple(table)))
     return tuple(zones)
 
@@ -530,7 +582,10 @@ def validate_dialogues(data: Any, source: str) -> dict[str, Dialogue]:
         for index, line in enumerate(lines):
             if not _is_text(line):
                 raise MapValidationError(source, f"{dialogue_id}.lines[{index}]", "سطر فارغ")
-        dialogues[dialogue_id] = Dialogue(dialogue_id, speaker, tuple(lines))
+        portrait = body.get("portrait")
+        if portrait is not None and not _is_text(portrait):
+            raise MapValidationError(source, f"{dialogue_id}.portrait", "مسار الصورة نصّي")
+        dialogues[dialogue_id] = Dialogue(dialogue_id, speaker, tuple(lines), portrait)
     return dialogues
 
 

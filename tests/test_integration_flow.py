@@ -94,7 +94,8 @@ def test_all_data_is_consistent() -> None:
 def test_arrival_plays_once() -> None:
     state = fresh_state()
     assert run_to_end(pick("village_01", Trigger(ON_MAP_ENTER), state), state) == [
-        ShowDialogue("village_arrival")
+        ShowDialogue("village_arrival"),
+        ShowDialogue("amin_arrival"),
     ]
     assert select_event(WORLD["maps"]["village_01"].events, Trigger(ON_MAP_ENTER), state) is None
 

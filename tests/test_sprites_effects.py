@@ -91,12 +91,20 @@ def test_flash_lasts_briefly_on_the_hit_side_only() -> None:
 
 def test_shake_only_while_active_and_moves_horizontally() -> None:
     effects = EffectsState()
-    assert effects.shake_offset() == (0, 0)
-    effects.add_shake()
-    dx, dy = effects.shake_offset()
+    assert effects.shake_offset(SIDE_ENEMY) == (0, 0)
+    effects.add_shake(SIDE_ENEMY, 8.0)
+    dx, dy = effects.shake_offset(SIDE_ENEMY)
     assert dx != 0 and dy == 0
+    assert effects.shake_offset(SIDE_PLAYER) == (0, 0)
     effects.update(SHAKE_LIFE + 0.01)
-    assert effects.shake_offset() == (0, 0)
+    assert effects.shake_offset(SIDE_ENEMY) == (0, 0)
+
+
+def test_shake_strength_follows_damage() -> None:
+    small, large = EffectsState(), EffectsState()
+    small.add_shake(SIDE_ENEMY, 3.0)
+    large.add_shake(SIDE_ENEMY, 12.0)
+    assert abs(large.shake_offset(SIDE_ENEMY)[0]) > abs(small.shake_offset(SIDE_ENEMY)[0])
 
 
 def test_floating_numbers_take_different_columns() -> None:

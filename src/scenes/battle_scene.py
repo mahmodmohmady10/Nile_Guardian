@@ -7,6 +7,14 @@ from collections.abc import Callable
 import pygame
 
 from src.config import ACCENT_COLOR, TEXT_COLOR
+from src.core.effects import (
+    COLUMN_GAP,
+    FLOAT_RISE,
+    SIDE_ENEMY,
+    SIDE_PLAYER,
+    EffectsState,
+)
+from src.engine.sprite_draw import build_surface, flashed, load_animal_surface
 from src.engine.text_renderer import TextRenderer
 from src.logic.battle_engine import (
     ACTION_ATTACK,
@@ -27,14 +35,6 @@ from src.logic.battle_engine import (
     BattleEvent,
 )
 from src.logic.battle_text import describe_event
-from src.core.effects import (
-    COLUMN_GAP,
-    FLOAT_RISE,
-    SIDE_ENEMY,
-    SIDE_PLAYER,
-    EffectsState,
-)
-from src.engine.sprite_draw import build_surface, flashed
 from src.logic.models import AnimalInstance
 from src.scenes.base_scene import BaseScene
 from src.utils.sprites import SpriteSpec
@@ -255,12 +255,18 @@ class BattleScene(BaseScene):
             target = SIDE_PLAYER if actor == SIDE_ENEMY else SIDE_ENEMY
             if event.kind == KIND_ATTACK:
                 self._effects.add_damage(target, event.amount, event.critical)
-                if event.critical:
-                    self._effects.add_shake()
+                self._shake(target, event.amount, event.critical)
             elif event.kind == KIND_COUNTER:
                 self._effects.add_damage(actor, event.amount)
+                self._shake(actor, event.amount, False)
             elif event.kind in (KIND_HEAL, KIND_ITEM_HEAL, KIND_LAST_STAND):
                 self._effects.add_heal(actor, event.amount)
+
+    def _shake(self, side: str, amount: int, critical: bool) -> None:
+        fighter = self._engine.enemy if side == SIDE_ENEMY else self._engine.player
+        ratio = amount / max(1, fighter.max_hp)
+        strength = min(14.0, 2.0 + ratio * 30.0) + (4.0 if critical else 0.0)
+        self._effects.add_shake(side, strength)
 
     def _after_log(self) -> None:
         if self._engine.outcome is None:
@@ -275,9 +281,10 @@ class BattleScene(BaseScene):
     def draw(self, surface: pygame.Surface) -> None:
         self._draw_background(surface)
         self._effects.update(1 / 60)
-        shake_x, shake_y = self._effects.shake_offset()
-        enemy_at = (ENEMY_AT[0] + shake_x, ENEMY_AT[1] + shake_y)
-        player_at = (PLAYER_AT[0] + shake_x, PLAYER_AT[1] + shake_y)
+        enemy_x, enemy_y = self._effects.shake_offset(SIDE_ENEMY)
+        player_x, player_y = self._effects.shake_offset(SIDE_PLAYER)
+        enemy_at = (ENEMY_AT[0] + enemy_x, ENEMY_AT[1] + enemy_y)
+        player_at = (PLAYER_AT[0] + player_x, PLAYER_AT[1] + player_y)
         self._draw_platform(surface, enemy_at)
         self._draw_platform(surface, player_at)
         self._draw_fighter(surface, self._engine.enemy, enemy_at, ENEMY_COLOR, SIDE_ENEMY)
@@ -353,10 +360,15 @@ class BattleScene(BaseScene):
             surface.blit(rendered, (panel.right - 30 - rendered.get_width(), y + 4))
         self.draw_text(surface, "ENTER", (panel.x + 30, panel.bottom - 34), ACCENT_COLOR, 22)
 
-    def _surface_for(self, animal: AnimalInstance) -> pygame.Surface:
-        key = animal.id
+    def _surface_for(self, animal: AnimalInstance, side: str) -> pygame.Surface:
+        key = f"{animal.id}:{side}"
         if key not in self._surfaces:
-            self._surfaces[key] = build_surface(self._sprites[key])
+            base = load_animal_surface(animal.id, SPRITE_PX)
+            if base is None:
+                base = build_surface(self._sprites[animal.id])
+            if side == SIDE_ENEMY:
+                base = pygame.transform.flip(base, True, False)
+            self._surfaces[key] = base
         return self._surfaces[key]
 
     def _background_surface(self, width: int, height: int) -> pygame.Surface:
@@ -397,7 +409,7 @@ class BattleScene(BaseScene):
         side: str,
     ) -> None:
         x, y = position
-        sprite = self._surface_for(animal)
+        sprite = self._surface_for(animal, side)
         surface.blit(flashed(sprite) if self._effects.is_flashing(side) else sprite, (x, y))
         card = pygame.Rect(x - 8, y + SPRITE_PX + 4, CARD_WIDTH, CARD_HEIGHT)
         pygame.draw.rect(surface, (14, 20, 30), card, border_radius=10)

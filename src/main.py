@@ -53,8 +53,8 @@ from src.utils.data_loader import (
     load_objectives_file,
 )
 from src.utils.paths import resource_path
-from src.utils.sprites import check_sprites_cover, load_sprites_file
 from src.utils.saves import AUTOSAVE_ID, SLOT_IDS, default_saves_dir, read_save, write_save
+from src.utils.sprites import check_sprites_cover, load_sprites_file
 from src.world.objectives import GuideData
 
 MAP_FILES = {"village_01": "village_01.json", "dinder_01": "dinder_01.json"}
@@ -354,6 +354,9 @@ def main() -> int:
     pygame.init()
     try:
         pygame.display.set_caption(TITLE)
+        icon = resource_path("data", "images", "icon", "game_icon.png")
+        if icon.is_file():
+            pygame.display.set_icon(pygame.image.load(str(icon)))
         screen = pygame.display.set_mode((WIDTH, HEIGHT))
         stack = SceneStack()
         session = Session(

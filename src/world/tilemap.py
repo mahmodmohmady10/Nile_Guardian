@@ -10,6 +10,9 @@ class TileType:
     name: str
     solid: bool
     color: tuple[int, int, int]
+    image: str | None = None
+    overlay: str | None = None
+    overlay_size: int | None = None
 
 
 class TileMap:

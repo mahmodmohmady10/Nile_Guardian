@@ -35,25 +35,25 @@ def is_background(color: pygame.Color, background: pygame.Color) -> bool:
 
 
 def cut_out(cell: pygame.Surface) -> pygame.Surface:
-    """يجعل الخلفية (لون الزاوية العليا) شفافة، ويقص الصورة إلى حدود الحيوان."""
+    """يحذف كل بكسل بلون الخلفية في كل مكان، على الحواف وبين الأرجل وفي الفراغات."""
     width, height = cell.get_size()
     background = cell.get_at((0, 0))
     left, top, right, bottom = width, height, -1, -1
+    keep = [[False] * width for _ in range(height)]
     for y in range(height):
         for x in range(width):
             if not is_background(cell.get_at((x, y)), background):
+                keep[y][x] = True
                 left, right = min(left, x), max(right, x)
                 top, bottom = min(top, y), max(bottom, y)
     if right < 0:
-        raise ValueError("لم يُعثر على حيوان في الخانة")
+        raise ValueError("لم يُعثر على صورة داخل الخانة")
     crop = pygame.Surface((right - left + 1, bottom - top + 1), pygame.SRCALPHA)
     for y in range(top, bottom + 1):
         for x in range(left, right + 1):
             color = cell.get_at((x, y))
-            if is_background(color, background):
-                crop.set_at((x - left, y - top), (0, 0, 0, 0))
-            else:
-                crop.set_at((x - left, y - top), (color.r, color.g, color.b, 255))
+            alpha = 255 if keep[y][x] else 0
+            crop.set_at((x - left, y - top), (color.r, color.g, color.b, alpha))
     return crop
 
 
