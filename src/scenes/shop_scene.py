@@ -7,6 +7,7 @@ import pygame
 from src.config import ACCENT_COLOR, TEXT_COLOR
 from src.core.game_state import GameState
 from src.core.scene_stack import SceneStack
+from src.engine.audio import AudioManager
 from src.engine.text_renderer import TextRenderer
 from src.logic.models import Item
 from src.scenes.base_scene import BaseScene
@@ -19,7 +20,9 @@ class ShopScene(BaseScene):
         renderer: TextRenderer,
         state: GameState,
         items: list[Item],
+        audio: AudioManager | None = None,
     ) -> None:
+        self._audio = audio
         self._stack = stack
         self._renderer = renderer
         self._state = state
@@ -40,6 +43,8 @@ class ShopScene(BaseScene):
     def _buy(self, item: Item) -> None:
         if self._state.spend(item.price):
             self._state.add_item(item.id)
+            if self._audio is not None:
+                self._audio.play_sfx("buy")
             self._message = f"تم شراء {item.name_ar}."
         else:
             self._message = "النقود غير كافية."

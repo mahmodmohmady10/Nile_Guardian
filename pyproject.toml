@@ -1,6 +1,6 @@
 [project]
 name = "nile-guardian-rpg"
-version = "1.4.0b1"
+version = "1.6.0b1"
 description = "حارس النيل: رحلة الأمين — لعبة أدوار ثنائية الأبعاد بالعربية"
 requires-python = ">=3.10"
 

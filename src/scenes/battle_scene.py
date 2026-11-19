@@ -14,6 +14,7 @@ from src.core.effects import (
     SIDE_PLAYER,
     EffectsState,
 )
+from src.engine.audio import AudioManager
 from src.engine.sprite_draw import build_surface, flashed, load_animal_surface
 from src.engine.text_renderer import TextRenderer
 from src.logic.battle_engine import (
@@ -26,7 +27,9 @@ from src.logic.battle_engine import (
     KIND_ATTACK,
     KIND_COUNTER,
     KIND_HEAL,
+    KIND_ITEM_DEFENSE,
     KIND_ITEM_HEAL,
+    KIND_ITEM_POWER,
     KIND_LAST_STAND,
     OUTCOME_CAPTURED,
     OUTCOME_LOST,
@@ -39,6 +42,11 @@ from src.logic.models import AnimalInstance
 from src.scenes.base_scene import BaseScene
 from src.utils.sprites import SpriteSpec
 
+SOUND_BY_OUTCOME = {
+    OUTCOME_WON: "victory",
+    OUTCOME_LOST: "defeat",
+    OUTCOME_CAPTURED: "capture",
+}
 LABELS = {
     ACTION_ATTACK: "هجوم",
     ACTION_SPECIAL: "مهارة",
@@ -99,7 +107,9 @@ class BattleScene(BaseScene):
         item_names: dict[str, str],
         move_names: dict[str, str],
         sprites: dict[str, SpriteSpec],
+        audio: AudioManager | None = None,
     ) -> None:
+        self._audio = audio
         self._sprites = sprites
         self._surfaces: dict[str, pygame.Surface] = {}
         self._effects = EffectsState()
@@ -156,6 +166,8 @@ class BattleScene(BaseScene):
     def _enter_end(self) -> None:
         self._phase = PHASE_END
         self._frames = 0
+        if self._audio is not None and self._engine.outcome in SOUND_BY_OUTCOME:
+            self._audio.play_sfx(SOUND_BY_OUTCOME[self._engine.outcome])
 
     def _handle_menu(self, action: str) -> None:
         entries = self._entries()
@@ -256,11 +268,19 @@ class BattleScene(BaseScene):
             if event.kind == KIND_ATTACK:
                 self._effects.add_damage(target, event.amount, event.critical)
                 self._shake(target, event.amount, event.critical)
+                self._sound("crit" if event.critical else "hit")
             elif event.kind == KIND_COUNTER:
                 self._effects.add_damage(actor, event.amount)
                 self._shake(actor, event.amount, False)
             elif event.kind in (KIND_HEAL, KIND_ITEM_HEAL, KIND_LAST_STAND):
                 self._effects.add_heal(actor, event.amount)
+                self._sound("heal")
+            elif event.kind in (KIND_ITEM_POWER, KIND_ITEM_DEFENSE):
+                self._sound("item")
+
+    def _sound(self, name: str) -> None:
+        if self._audio is not None:
+            self._audio.play_sfx(name)
 
     def _shake(self, side: str, amount: int, critical: bool) -> None:
         fighter = self._engine.enemy if side == SIDE_ENEMY else self._engine.player

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from src.utils.data_loader import load_dialogues_file, load_map_file
 from src.utils.paths import resource_path

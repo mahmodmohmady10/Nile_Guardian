@@ -14,6 +14,7 @@ from src.config import FONT_FILE, HEIGHT, TEXT_CACHE_SIZE, TITLE, WIDTH
 from src.core.game_state import GameState
 from src.core.save import SaveError, restore, snapshot
 from src.core.scene_stack import SceneStack
+from src.engine.audio import AudioManager
 from src.engine.game import Game
 from src.engine.text_renderer import TextRenderer
 from src.logic.battle_engine import (
@@ -80,6 +81,7 @@ class Session:
     state: GameState
     dialogues: dict[str, Dialogue]
     catalog: Catalog
+    audio: AudioManager
     renderer: TextRenderer
     rng: random.Random
     guide: GuideData
@@ -198,6 +200,7 @@ def menu_items(session: Session) -> MenuItems:
 
 
 def make_menu(session: Session) -> MenuScene:
+    session.audio.play_music("menu")
     return MenuScene(session.stack, session.renderer, lambda: menu_items(session))
 
 
@@ -238,7 +241,12 @@ def open_load(session: Session) -> None:
     )
 
 
+def play_map_music(session: Session) -> None:
+    session.audio.play_music(session.state.map_id.split("_")[0])
+
+
 def make_world(session: Session) -> WorldScene:
+    play_map_music(session)
     return WorldScene(
         session.state,
         load_map=lambda map_id: session.maps[map_id],
@@ -248,19 +256,27 @@ def make_world(session: Session) -> WorldScene:
         rng=session.rng,
         guide=session.guide,
         renderer=session.renderer,
-        on_map_changed=lambda: autosave(session),
+        on_map_changed=lambda: (autosave(session), play_map_music(session)),
         open_shop=lambda: open_shop(session),
         open_hospital=lambda: open_hospital(session),
     )
 
 
 def open_hospital(session: Session) -> None:
-    session.stack.push(HospitalScene(session.stack, session.renderer, session.state))
+    session.stack.push(
+        HospitalScene(session.stack, session.renderer, session.state, session.audio)
+    )
 
 
 def open_shop(session: Session) -> None:
     session.stack.push(
-        ShopScene(session.stack, session.renderer, session.state, list(session.items.values()))
+        ShopScene(
+            session.stack,
+            session.renderer,
+            session.state,
+            list(session.items.values()),
+            session.audio,
+        )
     )
 
 
@@ -288,9 +304,11 @@ def open_battle(session: Session, enemy_id: str, on_end: Callable[[str], None]) 
         if outcome == OUTCOME_CAPTURED and not engine.needs_replacement():
             session.state.party.append(engine.captured)
         session.stack.pop()
+        play_map_music(session)
         on_end(outcome)
 
     item_names = {item_id: item.name_ar for item_id, item in session.items.items()}
+    session.audio.play_music("battle")
     session.stack.push(
         BattleScene(
             engine,
@@ -302,6 +320,7 @@ def open_battle(session: Session, enemy_id: str, on_end: Callable[[str], None]) 
                 move_id: move.name_ar for move_id, move in session.catalog.moves.items()
             },
             sprites=session.sprites,
+            audio=session.audio,
         )
     )
 
@@ -361,6 +380,7 @@ def main() -> int:
         stack = SceneStack()
         session = Session(
             stack=stack,
+            audio=AudioManager(resource_path("data", "audio")),
             maps=maps,
             state=build_fresh_state(new_game, catalog, maps),
             dialogues=dialogues,
